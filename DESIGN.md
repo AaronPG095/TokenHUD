@@ -132,6 +132,8 @@ Avoid neon AI aesthetics, purple gradients, glass, finance-dashboard density, ga
 - Keep provider-neutral concepts, analysis, and settings outside the Codex adapter. Codex remains the only first-release provider.
 - Keep Windows lifecycle, notifications, startup, tray, and window behavior outside provider-neutral logic. Windows remains the only first-release platform.
 - Expand to another provider or operating system only after the Windows Codex experience is reliable and polished.
+- Use native presentation shells: WPF on Windows and SwiftUI for a future macOS application. Share contracts, schemas, terminology, and behavior tests rather than a cross-platform visual implementation.
+- Defer the executable shared-core bridge until macOS development begins; do not rewrite the Windows shell pre-emptively.
 
 ## Budget settings
 

@@ -22,6 +22,8 @@ Token HUD begins as a local Codex companion but is intended to grow into a Fluen
 
 Codex on Windows is the flagship first release and should become reliable, coherent, and polished before Token HUD expands to another provider or operating system. The first release must nevertheless keep provider-specific data access and platform-specific presentation behind explicit boundaries so future integrations do not require a product rewrite.
 
+Each operating system receives a native presentation shell: WPF remains the Windows implementation, and macOS should use SwiftUI when that phase begins. Platforms share product language, provider contracts, data schemas, and behavioral test fixtures rather than a forced pixel-level UI implementation. The mechanism for sharing executable core logic is deferred until macOS development starts.
+
 ## Permanent Privacy Position
 
 Token HUD is local-first. Core monitoring and management must work without a Fluent Studio account, and chat content, token telemetry, and provider credentials stay on the user's device by default. Future cloud synchronization or collaboration must be optional, explicit, and data-minimized. Licensing and update checks must remain technically separate from monitored usage data. Provider credentials must not be collected when an on-device integration can perform the work.
