@@ -16,6 +16,10 @@ Token HUD continuously exposes Context Load for the six most recent local Codex 
 
 Token HUD begins as a local Codex companion but is intended to grow into a Fluent Studio product for people who want deeper, customizable visibility and control over AI context and token usage. The long-term product may support multiple AI applications and operating systems, including macOS, while preserving a coherent cross-platform product model and native behavior on each platform. Commercial distribution remains an option rather than a current commitment.
 
+## Product Sequence
+
+Codex on Windows is the flagship first release and should become reliable, coherent, and polished before Token HUD expands to another provider or operating system. The first release must nevertheless keep provider-specific data access and platform-specific presentation behind explicit boundaries so future integrations do not require a product rewrite.
+
 ## Brand Personality
 
 Quiet, precise, native. The interface should feel like a focused Windows instrument: calm during normal operation, unmistakable when attention is needed, and never theatrical.

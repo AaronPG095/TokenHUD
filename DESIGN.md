@@ -115,3 +115,9 @@ Account Quota uses one footer line: `QUOTA  5h —  ·  Weekly 68% left`. It has
 ## Anti-patterns
 
 Avoid neon AI aesthetics, purple gradients, glass, finance-dashboard density, gaming visuals, giant hero metrics, decorative charts, excessive pills, and attention-seeking animation.
+
+## Product boundaries
+
+- Keep provider-neutral concepts, analysis, and settings outside the Codex adapter. Codex remains the only first-release provider.
+- Keep Windows lifecycle, notifications, startup, tray, and window behavior outside provider-neutral logic. Windows remains the only first-release platform.
+- Expand to another provider or operating system only after the Windows Codex experience is reliable and polished.
