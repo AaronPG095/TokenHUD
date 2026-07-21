@@ -1,0 +1,9 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/TokenHud.App/TokenHud.App.csproj" />
+    <Project Path="src/TokenHud.Core/TokenHud.Core.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/TokenHud.SelfTest/TokenHud.SelfTest.csproj" />
+  </Folder>
+</Solution>

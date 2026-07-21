@@ -1,0 +1,81 @@
+# Token HUD
+
+Token HUD makes the otherwise hidden token state of local Codex chats continuously visible and understandable.
+
+## Language
+
+**Context Load**:
+The tokens currently occupying a chat's available model context, expressed as a count and percentage of the context window.
+_Avoid_: Token usage, context usage
+
+**Context Budget**:
+The user-selected maximum desirable Context Load for one chat, independent of the model's larger technical context window. The default is 150,000 tokens.
+_Avoid_: Context window, token limit, account quota
+
+**Budget Zone**:
+A Context Load classification relative to the Context Budget: healthy, caution, critical, or over budget.
+_Avoid_: Usage tier, rate-limit status
+
+**Context Velocity**:
+The recent rate at which a chat's Context Load is changing, used to estimate how soon it may enter a higher Budget Zone.
+_Avoid_: Token speed, burn rate
+
+**Token Spike**:
+A single observed increase in Context Load that is unusually large relative to the chat's recent changes.
+_Avoid_: Expensive prompt, token leak
+
+**Session Consumption**:
+The cumulative tokens processed across model calls in a chat, including input, cached input, reasoning output, and final output.
+_Avoid_: Token usage, context load
+
+**Account Quota**:
+The remaining plan allowance reported for a time-bounded usage window, such as the five-hour or weekly window.
+_Avoid_: Token balance, session consumption
+
+**Top-level Chat**:
+A user-started Codex chat that may own one or more spawned subagent chats.
+_Avoid_: Parent session, root task
+
+**Chat Name**:
+The current user-visible name assigned to a Codex chat. It may change independently of the initial request and is the only name the HUD should present.
+_Avoid_: Thread title, first prompt, first user message
+
+**Chat Tree**:
+A Top-level Chat together with all of its spawned descendant chats. Session Consumption may be aggregated across the tree, but Context Load is always reported per chat.
+_Avoid_: Combined context, agent session
+
+**Running Subagent**:
+A spawned chat whose Codex edge is open and whose metadata has changed within the last 30 minutes. An older open edge is treated as inactive until it changes again, preventing abandoned edge records from creating stale warnings.
+_Avoid_: Open edge, child thread
+
+**Tracked Chat**:
+The top-level chat whose metrics occupy the HUD's primary view, normally the most recently active one.
+_Avoid_: Active chat, current session
+
+**Pinned Chat**:
+A top-level chat explicitly chosen to remain the Tracked Chat while other chats continue working.
+_Avoid_: Locked session, favorite chat
+
+**Recent Chat List**:
+The six most recently active Top-level Chats, ordered by the latest activity anywhere in each Chat Tree. It is the HUD's primary compact surface rather than a detail view of one Tracked Chat.
+_Avoid_: Chat carousel, session dashboard
+
+**Observation**:
+Reading and presenting a chat's state without changing that chat or starting Codex work.
+_Avoid_: Passive action, monitoring command
+
+**Chat Action**:
+An explicit operation that changes a Codex chat, such as starting context compaction.
+_Avoid_: HUD command, automatic fix
+
+**Compact View**:
+The small, continuously visible HUD surface for the Tracked Chat's essential metrics and warnings.
+_Avoid_: Mini dashboard, widget
+
+**Expanded View**:
+The detailed HUD surface for comparing chats, inspecting a Chat Tree, searching history, and changing preferences.
+_Avoid_: Full dashboard, settings window
+
+**Privacy Mode**:
+A display state that masks chat titles and project paths while preserving token metrics and operational status.
+_Avoid_: Incognito mode, private monitoring
