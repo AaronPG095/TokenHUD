@@ -22,6 +22,10 @@ Token HUD begins as a local Codex companion but is intended to grow into a Fluen
 
 Codex on Windows is the flagship first release and should become reliable, coherent, and polished before Token HUD expands to another provider or operating system. The first release must nevertheless keep provider-specific data access and platform-specific presentation behind explicit boundaries so future integrations do not require a product rewrite.
 
+## Permanent Privacy Position
+
+Token HUD is local-first. Core monitoring and management must work without a Fluent Studio account, and chat content, token telemetry, and provider credentials stay on the user's device by default. Future cloud synchronization or collaboration must be optional, explicit, and data-minimized. Licensing and update checks must remain technically separate from monitored usage data. Provider credentials must not be collected when an on-device integration can perform the work.
+
 ## Brand Personality
 
 Quiet, precise, native. The interface should feel like a focused Windows instrument: calm during normal operation, unmistakable when attention is needed, and never theatrical.
@@ -34,8 +38,8 @@ Avoid gaming overlays, neon AI styling, glass-heavy panels, financial-trading da
 
 1. Lead with Context Load because it is the metric that guides immediate action.
 2. Make important state legible at a peripheral glance without interrupting work.
-3. Keep unlike quantities separate: per-chat context, cumulative consumption, and account quota must never collapse into one number.
-4. Preserve privacy by reading only metadata and token events and by creating no duplicate transcript store.
+3. Keep unlike quantities separate: current context, token flow, and account quota must never collapse into one number.
+4. Minimize content access, process required content locally and transiently, and create no duplicate transcript store.
 5. Be honest about data freshness and capability boundaries; unavailable data and unsupported actions must be explicit.
 
 ## Accessibility & Inclusion

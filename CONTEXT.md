@@ -24,10 +24,6 @@ _Avoid_: Token speed, burn rate
 A single observed increase in Context Load that is unusually large relative to the chat's recent changes.
 _Avoid_: Expensive prompt, token leak
 
-**Session Consumption**:
-The cumulative tokens processed across model calls in a chat, including input, cached input, reasoning output, and final output.
-_Avoid_: Token usage, context load
-
 **Account Quota**:
 The remaining plan allowance reported for a time-bounded usage window, such as the five-hour or weekly window.
 _Avoid_: Token balance, session consumption
@@ -41,7 +37,7 @@ The current user-visible name assigned to a Codex chat. It may change independen
 _Avoid_: Thread title, first prompt, first user message
 
 **Chat Tree**:
-A Top-level Chat together with all of its spawned descendant chats. Session Consumption may be aggregated across the tree, but Context Load is always reported per chat.
+A Top-level Chat together with all of its spawned descendant chats. Context Load is always reported per chat rather than combined across the tree.
 _Avoid_: Combined context, agent session
 
 **Running Subagent**:
@@ -69,7 +65,7 @@ An explicit operation that changes a Codex chat, such as starting context compac
 _Avoid_: HUD command, automatic fix
 
 **Compact View**:
-The small, continuously visible HUD surface for the Tracked Chat's essential metrics and warnings.
+The small, continuously visible HUD surface showing the Recent Chat List, essential per-chat metrics, and Account Quota.
 _Avoid_: Mini dashboard, widget
 
 **Expanded View**:
@@ -79,3 +75,7 @@ _Avoid_: Full dashboard, settings window
 **Privacy Mode**:
 A display state that masks chat titles and project paths while preserving token metrics and operational status.
 _Avoid_: Incognito mode, private monitoring
+
+**Local-first**:
+A permanent product constraint under which core functionality runs on the user's device without an account, monitored content and telemetry stay on-device by default, and any future cloud feature is optional and data-minimized.
+_Avoid_: Offline-only, local storage mode

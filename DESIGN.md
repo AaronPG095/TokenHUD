@@ -111,6 +111,9 @@ Account Quota uses one footer line: `QUOTA  5h —  ·  Weekly 68% left`. It has
 - Windows high-contrast support and 100–200% display scaling.
 - Privacy Mode replaces titles and paths with neutral labels while preserving metrics.
 - Diagnostics record operational categories and counts only; no titles, paths, prompts, previews, or JSONL source lines.
+- Core monitoring requires no Fluent Studio account. Monitored content, token telemetry, and provider credentials remain on-device by default.
+- Any content needed for estimated Context Origin is processed transiently and is never copied into a Token HUD transcript store.
+- Licensing and update traffic must remain isolated from provider data and monitored usage.
 
 ## Anti-patterns
 
