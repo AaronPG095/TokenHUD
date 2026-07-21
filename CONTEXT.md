@@ -64,6 +64,10 @@ _Avoid_: Passive action, monitoring command
 An explicit, user-initiated operation that changes a provider chat through a supported capability, such as starting context compaction.
 _Avoid_: HUD command, automatic fix
 
+**Context Compaction**:
+A Chat Action that summarizes older working history to reduce Context Load while preserving continuity in the existing chat.
+_Avoid_: Clear context, delete history, start fresh
+
 **Compact View**:
 The small, continuously visible HUD surface showing the Recent Chat List, essential per-chat metrics, and Account Quota.
 _Avoid_: Mini dashboard, widget
