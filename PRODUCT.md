@@ -24,6 +24,12 @@ Codex on Windows is the flagship first release and should become reliable, coher
 
 Each operating system receives a native presentation shell: WPF remains the Windows implementation, and macOS should use SwiftUI when that phase begins. Platforms share product language, provider contracts, data schemas, and behavioral test fixtures rather than a forced pixel-level UI implementation. The mechanism for sharing executable core logic is deferred until macOS development starts.
 
+## First-release Scope
+
+The first Windows release contains the six-chat Compact View with correct current Chat Names, Context Load and Aaron's Smart Zones, accurate five-hour and weekly Account Quota, an Expanded View with chat browsing and per-chat detail, broad Context Origin and exact Token Flow visuals, local Metrics History and retention controls, threshold notifications, Privacy Mode, source health, Open Chat, capability-aware Compact Context and Context Reset controls, budget/profile settings, and accessibility polish. Unsupported Chat Actions remain disabled with an explanation.
+
+macOS, additional providers, cloud features, licensing infrastructure, and team features remain outside the first release.
+
 ## Provider Integration Policy
 
 Provider integrations use a capability ladder. A Supported Integration relies on an official API or documented local interface and may offer observation plus safe Chat Actions. Local Observation relies on stable exported logs or metadata and remains monitoring-only. An Experimental Adapter relies on undocumented local storage, is visibly marked fragile, and remains read-only. Token HUD never uses screen scraping, keystroke interception, or credential extraction. Every adapter reports its capabilities and health rather than implying feature parity.
