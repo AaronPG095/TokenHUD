@@ -6,7 +6,9 @@ product
 
 ## Users
 
-Local Codex users who run long or parallel chats and need to manage context deliberately without repeatedly opening status commands. They monitor the HUD peripherally while working in Codex and need immediate confidence about which chat is approaching its preferred context budget.
+The initial customer is an individual professional AI power user on Windows who runs long or parallel Codex chats and needs to manage context deliberately without repeatedly opening status commands. They monitor the HUD peripherally while working in Codex and need immediate confidence about which chat is approaching its preferred context budget.
+
+Teams and enterprises are not first-release customers. Shared telemetry, administration, organizational policy, and collaborative dashboards may be considered only after the individual product proves its value.
 
 ## Product Purpose
 
