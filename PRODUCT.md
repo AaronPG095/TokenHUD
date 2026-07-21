@@ -30,6 +30,10 @@ Token HUD is local-first. Core monitoring and management must work without a Flu
 
 Token HUD combines observation with safe management. It may open a relevant chat or offer a context-changing Chat Action, such as compaction, only when the provider exposes a supported capability. Unavailable actions remain disabled with an intelligible reason. Every context-changing action is user-initiated in the first release; Token HUD must not automatically compact, archive, or start chats.
 
+## Context Budget Hierarchy
+
+Each installation has a global default Context Budget; Aaron's default is 150,000 tokens. A provider may override that default, and an individual chat may override its provider. The resolved budget is capped below the active model's actual context limit when the provider reports one. Compact surfaces present only the resulting Budget Zone; inheritance and override controls belong in settings and detail tooltips.
+
 ## Brand Personality
 
 Quiet, precise, native. The interface should feel like a focused Windows instrument: calm during normal operation, unmistakable when attention is needed, and never theatrical.

@@ -131,3 +131,9 @@ Avoid neon AI aesthetics, purple gradients, glass, finance-dashboard density, ga
 - Keep provider-neutral concepts, analysis, and settings outside the Codex adapter. Codex remains the only first-release provider.
 - Keep Windows lifecycle, notifications, startup, tray, and window behavior outside provider-neutral logic. Windows remains the only first-release platform.
 - Expand to another provider or operating system only after the Windows Codex experience is reliable and polished.
+
+## Budget settings
+
+- Resolve Context Budget in this order: installation default, provider override, chat override, then model-limit safety cap.
+- Aaron's installation default is 150,000 tokens; product defaults remain configurable for other users.
+- Compact View shows only the resolved Budget Zone. Expanded tooltips and settings explain inheritance and overrides.

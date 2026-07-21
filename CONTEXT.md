@@ -9,7 +9,7 @@ The tokens currently occupying a chat's available model context, expressed as a 
 _Avoid_: Token usage, context usage
 
 **Context Budget**:
-The user-selected maximum desirable Context Load for one chat, independent of the model's larger technical context window. The default is 150,000 tokens.
+The resolved maximum desirable Context Load for one chat. It inherits from the installation default, may be overridden by provider and then chat, and is capped below the model's reported technical context limit. Aaron's installation default is 150,000 tokens.
 _Avoid_: Context window, token limit, account quota
 
 **Budget Zone**:
