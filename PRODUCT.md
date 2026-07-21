@@ -52,6 +52,10 @@ The repository remains private Fluent Studio work and carries no open-source lic
 
 The local desktop product should use a one-time paid license, with paid major upgrades remaining an option. Core local monitoring and management must not require a recurring subscription. A subscription is justified only for a genuinely ongoing optional service operated by Fluent Studio, such as encrypted synchronization, team collaboration, or hosted analytics.
 
+## Telemetry Policy
+
+Behavioral analytics are off by default. Crash and diagnostic reports are sent only through manual submission or explicit opt-in, and users must be able to inspect their contents before transmission. Reports exclude chat names, filesystem paths, prompts, transcripts, provider credentials, and token histories. Update checks transmit only the minimum version and platform information, and licensing systems receive no monitored usage data.
+
 ## Anti-references
 
 Avoid gaming overlays, neon AI styling, glass-heavy panels, financial-trading dashboards, decorative charts, and dense telemetry consoles. Do not make routine healthy state visually urgent.

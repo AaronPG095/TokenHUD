@@ -121,6 +121,7 @@ Account Quota uses one footer line: `QUOTA  5h —  ·  Weekly 68% left`. It has
 - Core monitoring requires no Fluent Studio account. Monitored content, token telemetry, and provider credentials remain on-device by default.
 - Any content needed for estimated Context Origin is processed transiently and is never copied into a Token HUD transcript store.
 - Licensing and update traffic must remain isolated from provider data and monitored usage.
+- Behavioral analytics are disabled by default. Crash or diagnostic submission requires manual action or explicit opt-in and provides a human-readable preview of the data to be sent.
 
 ## Anti-patterns
 
