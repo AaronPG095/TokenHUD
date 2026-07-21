@@ -44,6 +44,10 @@ Quiet, precise, native. The interface should feel like a focused Windows instrum
 
 Token HUD is the working product name, not yet the permanent commercial brand. Before public release, Fluent Studio must review trademark conflicts, domain and app-store availability, distinctiveness, international clarity, and fit with the wider studio portfolio. Development should not pause for naming work before the Windows MVP is coherent.
 
+## Repository and Licensing Posture
+
+The repository remains private Fluent Studio work and carries no open-source license during product discovery. Public hosting and open-source components are deferred until the commercial value boundary is understood. A complete third-party dependency and asset-license audit is a release requirement before any public or paid distribution.
+
 ## Anti-references
 
 Avoid gaming overlays, neon AI styling, glass-heavy panels, financial-trading dashboards, decorative charts, and dense telemetry consoles. Do not make routine healthy state visually urgent.
