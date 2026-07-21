@@ -48,6 +48,10 @@ Token HUD is the working product name, not yet the permanent commercial brand. B
 
 The repository remains private Fluent Studio work and carries no open-source license during product discovery. Public hosting and open-source components are deferred until the commercial value boundary is understood. A complete third-party dependency and asset-license audit is a release requirement before any public or paid distribution.
 
+## Commercial Principle
+
+The local desktop product should use a one-time paid license, with paid major upgrades remaining an option. Core local monitoring and management must not require a recurring subscription. A subscription is justified only for a genuinely ongoing optional service operated by Fluent Studio, such as encrypted synchronization, team collaboration, or hosted analytics.
+
 ## Anti-references
 
 Avoid gaming overlays, neon AI styling, glass-heavy panels, financial-trading dashboards, decorative charts, and dense telemetry consoles. Do not make routine healthy state visually urgent.
