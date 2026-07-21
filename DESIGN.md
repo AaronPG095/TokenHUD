@@ -101,6 +101,7 @@ Account Quota uses one footer line: `QUOTA  5h —  ·  Weekly 68% left`. It has
 - Context Reset is exposed only through a stable provider capability. Codex `/clear` and `/new` do not satisfy the requirement because they start a fresh chat, and the deprecated `thread/rollback` endpoint is not a production-safe substitute.
 - Context Reset preserves the visible transcript for the user while excluding pre-reset working history from later model context. The interface must visibly mark the reset boundary so retained history is not mistaken for model-visible context.
 - Context Reset uses an inline two-click confirmation rather than a modal. The first activation arms the existing Clear Context control and changes that same control into a red `Confirm Clear` action. Only a second activation of the armed control executes the reset; the first activation never changes chat state.
+- `Confirm Clear` remains armed for eight seconds. It disarms on Escape, window focus loss, chat selection change, view collapse, or timeout. Pointer and keyboard use both require two distinct activations, and the changed label provides a non-color confirmation cue alongside the red styling. The action cannot be armed while the target chat is running.
 - Settings are a compact panel, not a separate visual language: context budget, always-on-top, privacy, notifications, monitoring pause, and login startup.
 - No prompt excerpts, first-message previews, or message content appear anywhere.
 
