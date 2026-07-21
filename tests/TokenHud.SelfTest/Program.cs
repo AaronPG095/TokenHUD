@@ -52,9 +52,9 @@ static Task ParseTokenEventAsync()
 static Task BudgetBoundariesAsync()
 {
     var policy = new BudgetPolicy();
-    Check(policy.GetZone(112_499) == BudgetZone.Healthy, "Healthy boundary is wrong.");
-    Check(policy.GetZone(112_500) == BudgetZone.Caution, "Caution boundary is wrong.");
-    Check(policy.GetZone(135_000) == BudgetZone.Critical, "Critical boundary is wrong.");
+    Check(policy.GetZone(99_999) == BudgetZone.Healthy, "Healthy boundary is wrong.");
+    Check(policy.GetZone(100_000) == BudgetZone.Caution, "Caution boundary is wrong.");
+    Check(policy.GetZone(125_000) == BudgetZone.Critical, "Critical boundary is wrong.");
     Check(policy.GetZone(150_000) == BudgetZone.OverBudget, "Over-budget boundary is wrong.");
     return Task.CompletedTask;
 }
@@ -72,7 +72,7 @@ static Task VelocityAndSpikeAsync()
     var analysis = BudgetAnalyzer.Analyze(history, new BudgetPolicy());
     Check(analysis.MedianPositiveDelta == 2_050, "Median positive delta is wrong.");
     Check(analysis.HasSpike, "Large latest delta was not detected as a spike.");
-    Check(analysis.EventsToNextZone == 31, "Estimated events to caution is wrong.");
+    Check(analysis.EventsToNextZone == 25, "Estimated events to caution is wrong.");
     return Task.CompletedTask;
 }
 

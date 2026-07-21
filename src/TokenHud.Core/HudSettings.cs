@@ -17,9 +17,9 @@ public sealed class HudSettings
     public double? Left { get; set; }
     public double? Top { get; set; }
     public double CompactWidth { get; set; } = 392;
-    public double CompactHeight { get; set; } = 340;
-    public double ExpandedWidth { get; set; } = 820;
-    public double ExpandedHeight { get; set; } = 700;
+    public double CompactHeight { get; set; } = 390;
+    public double ExpandedWidth { get; set; } = 860;
+    public double ExpandedHeight { get; set; } = 720;
 }
 
 public sealed class AppDataPaths

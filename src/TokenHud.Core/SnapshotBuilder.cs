@@ -27,7 +27,7 @@ public sealed class SnapshotBuilder
 
         var roots = catalog.Threads
             .Where(item => item.IsTopLevel)
-            .OrderByDescending(item => item.UpdatedAt)
+            .OrderByDescending(item => Flatten(item, children).Max(entry => entry.Thread.UpdatedAt))
             .ToArray();
         var recentRoots = roots.Where(item => !item.Archived).Take(6).ToList();
 
@@ -35,10 +35,6 @@ public sealed class SnapshotBuilder
         if (!string.IsNullOrWhiteSpace(pinnedThreadId) && byId.TryGetValue(pinnedThreadId, out var pinnedRecord))
         {
             pinned = FindRoot(pinnedRecord, byId);
-            if (recentRoots.All(item => item.Id != pinned.Id))
-            {
-                recentRoots.Insert(0, pinned);
-            }
         }
 
         var trackedRoot = pinned ?? recentRoots.FirstOrDefault();

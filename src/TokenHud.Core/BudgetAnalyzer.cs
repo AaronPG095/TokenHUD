@@ -1,6 +1,9 @@
 namespace TokenHud.Core;
 
-public sealed record BudgetPolicy(long Budget = 150_000, double CautionAt = 0.75, double CriticalAt = 0.90)
+public sealed record BudgetPolicy(
+    long Budget = 150_000,
+    double CautionAt = 100_000d / 150_000d,
+    double CriticalAt = 125_000d / 150_000d)
 {
     public BudgetZone GetZone(long load)
     {

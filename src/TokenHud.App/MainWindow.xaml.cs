@@ -26,6 +26,7 @@ public partial class MainWindow : Window
     private readonly DispatcherTimer _searchTimer;
     private readonly DispatcherTimer _saveTimer;
     private readonly Dictionary<string, AlertState> _alertStates = new(StringComparer.Ordinal);
+    private readonly ObservableCollection<RecentChatDisplayItem> _recentItems = [];
     private readonly ObservableCollection<ChatListItem> _chatItems = [];
     private readonly ObservableCollection<ThreadDisplayItem> _threadItems = [];
     private readonly System.Windows.Forms.NotifyIcon _trayIcon;
@@ -64,6 +65,7 @@ public partial class MainWindow : Window
             UseAeroCaptionButtons = false,
         });
 
+        RecentChatList.ItemsSource = _recentItems;
         ChatList.ItemsSource = _chatItems;
         ThreadGrid.ItemsSource = _threadItems;
         _searchTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(300) };
@@ -173,20 +175,18 @@ public partial class MainWindow : Window
             {
                 TrackedTitle.Text = "No local Codex chats found";
                 ModeLabel.Text = "Waiting for a chat";
-                ChatPositionLabel.Text = "0 of 0";
-                PreviousChatButton.IsEnabled = false;
-                NextChatButton.IsEnabled = false;
                 ContextValue.Text = "—";
                 ContextMeter.Value = 0;
-                ConsumptionValue.Text = "—";
-                ChildWarning.Text = "No active subagents";
+                ZoneLabel.Text = "Waiting";
+                OriginStatusLabel.Text = "Context origin unavailable";
                 _threadItems.Clear();
+                UpdateBreakdown(null);
             }
             else
             {
                 TrackedTitle.Text = DisplayTitle(tracked.Root);
                 var isPinned = _settings.PinnedThreadId is not null;
-                ModeLabel.Text = isPinned ? "Pinned chat" : "Following latest";
+                ModeLabel.Text = isPinned ? "Selected chat" : "Most recent chat";
                 PinButton.Foreground = FindBrush(isPinned ? "PrimaryBrush" : "MutedBrush");
                 PinButton.ToolTip = isPinned ? "Follow latest chat" : "Pin current chat";
                 AutomationProperties.SetName(PinButton, isPinned ? "Follow latest chat" : "Pin current chat");
@@ -199,23 +199,23 @@ public partial class MainWindow : Window
                 ZoneLabel.Foreground = zoneBrush;
                 ZoneBadge.BorderBrush = zoneBrush;
                 AutomationProperties.SetName(ContextMeter, $"Context budget {tracked.Analysis.BudgetPercent:0.#} percent used, {ZoneName(tracked.Analysis.Zone)}");
+                OriginStatusLabel.Text = "Experimental Codex adapter · Context origin unavailable";
 
-                VelocityLabel.Text = FormatVelocity(tracked.Analysis);
-                SpikeBadge.Visibility = tracked.Analysis.HasSpike ? Visibility.Visible : Visibility.Collapsed;
-                SpikeLabel.Text = $"Spike +{FormatTokens(tracked.Analysis.LatestDelta)}";
-                ConsumptionValue.Text = FormatTokens(tracked.TreeConsumption.TotalTokens);
-                UpdateChildWarning(tracked.HighestChild);
                 UpdateBreakdown(tracked);
                 UpdateThreadGrid(tracked);
             }
 
             UpdateQuota(snapshot.Quota);
+            UpdateRecentList(snapshot);
             UpdateChatList(snapshot);
-            UpdateChatNavigation(snapshot);
-            SourceHealthLabel.Text = snapshot.SourceStatus;
+            CompactBudgetLabel.Text = $"CONTEXT / {FormatTokens(_settings.ContextBudget)}";
+            SourceHealthLabel.Text = $"Experimental Codex adapter · {snapshot.SourceStatus}";
             RefreshLabel.Text = $"Updated {snapshot.RefreshedAt:HH:mm:ss}";
             HealthDot.Fill = FindBrush(snapshot.StateDatabaseAvailable ? "HealthyBrush" : "CautionBrush");
-            AutomationProperties.SetName(HealthDot, snapshot.StateDatabaseAvailable ? "Local source healthy" : "Local source fallback active");
+            HealthDot.ToolTip = snapshot.StateDatabaseAvailable
+                ? "Experimental Codex adapter · Local source healthy"
+                : "Experimental Codex adapter · Local source fallback active";
+            AutomationProperties.SetName(HealthDot, HealthDot.ToolTip.ToString());
             _trayIcon.Text = MakeTrayText(tracked);
             CheckAlerts(snapshot);
         }
@@ -225,12 +225,62 @@ public partial class MainWindow : Window
         }
     }
 
-    private void UpdateBreakdown(ChatUsage tracked)
+    private void UpdateBreakdown(ChatUsage? tracked)
     {
-        InputValue.Text = FormatTokens(tracked.TreeConsumption.InputTokens);
-        CachedValue.Text = FormatTokens(tracked.TreeConsumption.CachedInputTokens);
-        OutputValue.Text = FormatTokens(tracked.TreeConsumption.OutputTokens);
-        ReasoningValue.Text = FormatTokens(tracked.TreeConsumption.ReasoningOutputTokens);
+        var flow = tracked?.Latest?.Context ?? TokenBreakdown.Empty;
+        var newInput = Math.Max(0, flow.InputTokens - flow.CachedInputTokens - flow.CacheWriteInputTokens);
+        var visibleOutput = Math.Max(0, flow.OutputTokens - flow.ReasoningOutputTokens);
+
+        InputValue.Text = flow.InputTokens == 0 ? "—" : FormatTokens(flow.InputTokens);
+        CachedValue.Text = FormatTokens(flow.CachedInputTokens);
+        CacheWriteValue.Text = FormatTokens(flow.CacheWriteInputTokens);
+        NewInputValue.Text = FormatTokens(newInput);
+        OutputValue.Text = flow.OutputTokens == 0 ? "—" : FormatTokens(flow.OutputTokens);
+        ReasoningValue.Text = FormatTokens(flow.ReasoningOutputTokens);
+        VisibleOutputValue.Text = FormatTokens(visibleOutput);
+
+        SetFlowColumns(InputCachedColumn, InputWriteColumn, InputNewColumn,
+            flow.CachedInputTokens, flow.CacheWriteInputTokens, newInput);
+        SetFlowColumns(OutputReasoningColumn, OutputVisibleColumn,
+            flow.ReasoningOutputTokens, visibleOutput);
+    }
+
+    private static void SetFlowColumns(
+        System.Windows.Controls.ColumnDefinition first,
+        System.Windows.Controls.ColumnDefinition second,
+        long firstValue,
+        long secondValue)
+    {
+        if (firstValue + secondValue <= 0)
+        {
+            first.Width = new GridLength(1, GridUnitType.Star);
+            second.Width = new GridLength(1, GridUnitType.Star);
+            return;
+        }
+
+        first.Width = new GridLength(Math.Max(0, firstValue), GridUnitType.Star);
+        second.Width = new GridLength(Math.Max(0, secondValue), GridUnitType.Star);
+    }
+
+    private static void SetFlowColumns(
+        System.Windows.Controls.ColumnDefinition first,
+        System.Windows.Controls.ColumnDefinition second,
+        System.Windows.Controls.ColumnDefinition third,
+        long firstValue,
+        long secondValue,
+        long thirdValue)
+    {
+        if (firstValue + secondValue + thirdValue <= 0)
+        {
+            first.Width = new GridLength(1, GridUnitType.Star);
+            second.Width = new GridLength(0);
+            third.Width = new GridLength(1, GridUnitType.Star);
+            return;
+        }
+
+        first.Width = new GridLength(Math.Max(0, firstValue), GridUnitType.Star);
+        second.Width = new GridLength(Math.Max(0, secondValue), GridUnitType.Star);
+        third.Width = new GridLength(Math.Max(0, thirdValue), GridUnitType.Star);
     }
 
     private void UpdateThreadGrid(ChatUsage tracked)
@@ -256,18 +306,44 @@ public partial class MainWindow : Window
         }
     }
 
+    private void UpdateRecentList(HudSnapshot snapshot)
+    {
+        _recentItems.Clear();
+        foreach (var chat in snapshot.RecentChats.Take(6))
+        {
+            var title = DisplayTitle(chat.Root);
+            var context = FormatTokens(chat.Analysis.Load);
+            var zone = ZoneName(chat.Analysis.Zone);
+            _recentItems.Add(new RecentChatDisplayItem(
+                chat.Root.Id,
+                title,
+                context,
+                zone,
+                FindBrush(ZoneBrushName(chat.Analysis.Zone)),
+                $"{title}, {context} context, {zone}"));
+        }
+    }
+
     private void UpdateChatList(HudSnapshot snapshot)
     {
         var selectedId = (ChatList.SelectedItem as ChatListItem)?.Id;
+        var usageById = snapshot.RecentChats.ToDictionary(chat => chat.Root.Id, StringComparer.Ordinal);
         _chatItems.Clear();
+
         if (!string.IsNullOrWhiteSpace(SearchBox.Text))
         {
             foreach (var chat in snapshot.SearchableChats)
             {
+                usageById.TryGetValue(chat.Id, out var usage);
+                var context = usage is null ? "—" : FormatTokens(usage.Analysis.Load);
+                var zone = usage?.Analysis.Zone ?? BudgetZone.Healthy;
                 _chatItems.Add(new ChatListItem(
                     chat.Id,
                     DisplayTitle(chat),
                     chat.Archived ? "Archived" : $"Updated {chat.UpdatedAt.LocalDateTime:g}",
+                    context,
+                    usage is null ? "Not sampled" : ZoneName(zone),
+                    usage is null ? FindBrush("MutedBrush") : FindBrush(ZoneBrushName(zone)),
                     chat.Archived,
                     chat.Id == _settings.PinnedThreadId));
             }
@@ -279,7 +355,10 @@ public partial class MainWindow : Window
                 _chatItems.Add(new ChatListItem(
                     chat.Root.Id,
                     DisplayTitle(chat.Root),
-                    $"{FormatTokens(chat.Analysis.Load)} · {ZoneName(chat.Analysis.Zone)}",
+                    ZoneName(chat.Analysis.Zone),
+                    FormatTokens(chat.Analysis.Load),
+                    ZoneName(chat.Analysis.Zone),
+                    FindBrush(ZoneBrushName(chat.Analysis.Zone)),
                     chat.Root.Archived,
                     chat.Root.Id == _settings.PinnedThreadId));
             }
@@ -289,59 +368,32 @@ public partial class MainWindow : Window
             ?? _chatItems.FirstOrDefault(item => item.Id == selectedId);
     }
 
-    private void UpdateChatNavigation(HudSnapshot snapshot)
-    {
-        var trackedId = snapshot.Tracked?.Root.Id;
-        var index = trackedId is null
-            ? -1
-            : snapshot.RecentChats.ToList().FindIndex(chat => chat.Root.Id == trackedId);
-        ChatPositionLabel.Text = index < 0 ? $"0 of {snapshot.RecentChats.Count}" : $"{index + 1} of {snapshot.RecentChats.Count}";
-        PreviousChatButton.IsEnabled = index > 0;
-        NextChatButton.IsEnabled = index >= 0 && index < snapshot.RecentChats.Count - 1;
-    }
-
-    private void UpdateChildWarning(ThreadBreakdown? child)
-    {
-        if (child is null)
-        {
-            ChildWarning.Text = "No active subagents";
-            ChildWarning.Foreground = FindBrush("MutedBrush");
-            return;
-        }
-
-        var name = _settings.PrivacyMode ? "Subagent" : DisplayTitle(child.Thread);
-        ChildWarning.Text = $"{name} · {FormatTokens(child.Analysis.Load)}";
-        ChildWarning.Foreground = FindBrush(ZoneBrushName(child.Analysis.Zone));
-        ChildWarning.ToolTip = $"Highest child context: {child.Analysis.BudgetPercent:0.#}% of budget";
-    }
-
     private void UpdateQuota(AccountQuota? quota)
     {
-        UpdateQuotaWindow(PrimaryQuotaLabel, PrimaryQuotaMeter, quota?.FiveHour, "Five-hour quota");
-        UpdateQuotaWindow(SecondaryQuotaLabel, SecondaryQuotaMeter, quota?.Weekly, "Weekly quota");
+        var fiveHour = quota?.FiveHour;
+        var weekly = quota?.Weekly;
+        var fiveHourText = fiveHour is null ? "—" : $"{fiveHour.RemainingPercent:0}% left";
+        var weeklyText = weekly is null ? "—" : $"{weekly.RemainingPercent:0}% left";
+
+        QuotaSummaryLabel.Text = $"QUOTA   5h {fiveHourText}   ·   Weekly {weeklyText}";
+        QuotaSummaryLabel.ToolTip = string.Join(Environment.NewLine, new[]
+        {
+            FormatQuotaReset("Five-hour", fiveHour),
+            FormatQuotaReset("Weekly", weekly),
+        });
+        AutomationProperties.SetName(QuotaSummaryLabel, $"Account quota. Five-hour {fiveHourText}. Weekly {weeklyText}.");
     }
 
-    private static void UpdateQuotaWindow(
-        System.Windows.Controls.TextBlock label,
-        System.Windows.Controls.ProgressBar meter,
-        RateLimitWindow? window,
-        string name)
+    private static string FormatQuotaReset(string name, RateLimitWindow? window)
     {
         if (window is null)
         {
-            label.Text = "—";
-            meter.Value = 0;
-            label.ToolTip = $"{name} data has not been reported in this session.";
-            meter.ToolTip = label.ToolTip;
-            AutomationProperties.SetName(meter, $"{name} not reported");
-            return;
+            return $"{name}: not reported";
         }
 
-        label.Text = $"{window.RemainingPercent:0}% left";
-        meter.Value = window.RemainingPercent;
-        label.ToolTip = window.ResetsAt is null ? null : $"Resets {window.ResetsAt.Value.LocalDateTime:g}";
-        meter.ToolTip = label.ToolTip;
-        AutomationProperties.SetName(meter, $"{name}, {window.RemainingPercent:0} percent remaining");
+        return window.ResetsAt is null
+            ? $"{name}: reset time not reported"
+            : $"{name}: resets {window.ResetsAt.Value.LocalDateTime:g}";
     }
 
     private void CheckAlerts(HudSnapshot snapshot)
@@ -438,7 +490,7 @@ public partial class MainWindow : Window
             NotifyCheckBox.IsChecked = _settings.NotificationsEnabled;
             ArchivedCheckBox.IsChecked = _settings.ShowArchived;
             BudgetBox.Text = _settings.ContextBudget.ToString("N0", CultureInfo.CurrentCulture);
-            PauseButton.Content = _settings.MonitoringPaused ? "Resume" : "Pause";
+            PauseButton.Content = _settings.MonitoringPaused ? "Resume monitoring" : "Pause monitoring";
             PrivacyButton.Foreground = FindBrush(_settings.PrivacyMode ? "PrimaryBrush" : "MutedBrush");
             PrivacyButton.ToolTip = _settings.PrivacyMode ? "Show chat names" : "Hide chat names";
             AutomationProperties.SetName(PrivacyButton, _settings.PrivacyMode ? "Show chat names" : "Hide chat names");
@@ -473,6 +525,7 @@ public partial class MainWindow : Window
         {
             if (_settings.Expanded)
             {
+                CompactPanel.Visibility = Visibility.Collapsed;
                 ExpandedPanel.Visibility = Visibility.Visible;
                 StatusBar.Visibility = Visibility.Visible;
                 MinWidth = 720;
@@ -484,10 +537,11 @@ public partial class MainWindow : Window
             }
             else
             {
+                CompactPanel.Visibility = Visibility.Visible;
                 ExpandedPanel.Visibility = Visibility.Collapsed;
                 StatusBar.Visibility = Visibility.Collapsed;
                 MinWidth = 360;
-                MinHeight = 324;
+                MinHeight = 360;
                 Width = Math.Max(_settings.CompactWidth, MinWidth);
                 Height = Math.Max(_settings.CompactHeight, MinHeight);
                 ExpandButton.ToolTip = "Show all chats and details";
@@ -509,19 +563,19 @@ public partial class MainWindow : Window
             _settings.CompactWidth = 392;
         }
 
-        if (!double.IsFinite(_settings.CompactHeight) || _settings.CompactHeight is < 324 or > 460)
+        if (!double.IsFinite(_settings.CompactHeight) || _settings.CompactHeight is < 360 or > 520)
         {
-            _settings.CompactHeight = 340;
+            _settings.CompactHeight = 390;
         }
 
         if (!double.IsFinite(_settings.ExpandedWidth) || _settings.ExpandedWidth is < 720 or > 1_800)
         {
-            _settings.ExpandedWidth = 820;
+            _settings.ExpandedWidth = 860;
         }
 
         if (!double.IsFinite(_settings.ExpandedHeight) || _settings.ExpandedHeight is < 680 or > 1_200)
         {
-            _settings.ExpandedHeight = 700;
+            _settings.ExpandedHeight = 720;
         }
     }
 
@@ -572,7 +626,7 @@ public partial class MainWindow : Window
     private void TogglePause()
     {
         _settings.MonitoringPaused = !_settings.MonitoringPaused;
-        PauseButton.Content = _settings.MonitoringPaused ? "Resume" : "Pause";
+        PauseButton.Content = _settings.MonitoringPaused ? "Resume monitoring" : "Pause monitoring";
         _pauseMenu.Checked = _settings.MonitoringPaused;
         if (!_settings.MonitoringPaused)
         {
@@ -665,29 +719,22 @@ public partial class MainWindow : Window
         ScheduleSave();
     }
 
-    private void PreviousChatButton_Click(object sender, RoutedEventArgs e) => NavigateChat(-1);
-
-    private void NextChatButton_Click(object sender, RoutedEventArgs e) => NavigateChat(1);
-
-    private void NavigateChat(int offset)
+    private void RecentChatButton_Click(object sender, RoutedEventArgs e)
     {
-        if (_snapshot?.Tracked is null || _snapshot.RecentChats.Count == 0)
+        if (sender is not System.Windows.Controls.Button { Tag: string threadId } || string.IsNullOrWhiteSpace(threadId))
         {
             return;
         }
 
-        var chats = _snapshot.RecentChats;
-        var index = chats.ToList().FindIndex(chat => chat.Root.Id == _snapshot.Tracked.Root.Id);
-        var targetIndex = Math.Clamp(index + offset, 0, chats.Count - 1);
-        if (index < 0 || targetIndex == index)
-        {
-            return;
-        }
-
-        _settings.PinnedThreadId = chats[targetIndex].Root.Id;
+        _settings.PinnedThreadId = threadId;
+        _settings.Expanded = true;
+        ApplyViewMode();
         _monitor?.RequestRefresh();
         ScheduleSave();
     }
+
+    private void SettingsButton_Click(object sender, RoutedEventArgs e) =>
+        SettingsPopup.IsOpen = !SettingsPopup.IsOpen;
 
     private void SearchBox_TextChanged(object sender, System.Windows.Controls.TextChangedEventArgs e)
     {
@@ -762,19 +809,14 @@ public partial class MainWindow : Window
 
     private void Window_KeyDown(object sender, System.Windows.Input.KeyEventArgs e)
     {
-        if ((Keyboard.Modifiers & ModifierKeys.Control) == 0)
+        if (e.Key != Key.Escape)
         {
             return;
         }
 
-        if (e.Key == Key.PageUp)
+        if (SettingsPopup.IsOpen)
         {
-            NavigateChat(-1);
-            e.Handled = true;
-        }
-        else if (e.Key == Key.PageDown)
-        {
-            NavigateChat(1);
+            SettingsPopup.IsOpen = false;
             e.Handled = true;
         }
     }

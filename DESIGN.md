@@ -58,8 +58,8 @@ Text and interactive foregrounds must maintain WCAG AA contrast. Semantic colors
 
 ## Geometry and spacing
 
-- Compact window: 392 × 340 logical pixels; minimum 360 × 324.
-- Expanded window: 820 × 700 logical pixels; minimum 720 × 680.
+- Compact window: 392 × 390 logical pixels; minimum 360 × 360.
+- Expanded window: 860 × 720 logical pixels; minimum 720 × 680.
 - Base spacing: 4px; common gaps 8, 12, 16, and 24px.
 - Outer inset: 16px compact, 20px expanded.
 - Corners: 10px for major surfaces, 6px for controls, fully round only for status dots.
