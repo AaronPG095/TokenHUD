@@ -69,7 +69,7 @@ A Chat Action that summarizes older working history to reduce Context Load while
 _Avoid_: Clear context, delete history, start fresh
 
 **Context Reset**:
-A Chat Action that removes accumulated working history from the model-visible context while retaining the same chat identity. Persistent instructions may load again after the reset, so Context Load does not necessarily become zero.
+A Chat Action that removes accumulated working history from the model-visible context while retaining the same chat identity and keeping its earlier transcript readable to the user. Persistent instructions may load again after the reset, so Context Load does not necessarily become zero.
 _Avoid_: Context Compaction, new chat, delete chat
 
 **Compact View**:
