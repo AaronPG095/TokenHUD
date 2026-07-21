@@ -40,6 +40,10 @@ Aaron's Budget Zones treat 100,000 tokens as the intervention point and 150,000 
 
 Quiet, precise, native. The interface should feel like a focused Windows instrument: calm during normal operation, unmistakable when attention is needed, and never theatrical.
 
+## Working Name
+
+Token HUD is the working product name, not yet the permanent commercial brand. Before public release, Fluent Studio must review trademark conflicts, domain and app-store availability, distinctiveness, international clarity, and fit with the wider studio portfolio. Development should not pause for naming work before the Windows MVP is coherent.
+
 ## Anti-references
 
 Avoid gaming overlays, neon AI styling, glass-heavy panels, financial-trading dashboards, decorative charts, and dense telemetry consoles. Do not make routine healthy state visually urgent.
