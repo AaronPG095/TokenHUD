@@ -26,6 +26,10 @@ Codex on Windows is the flagship first release and should become reliable, coher
 
 Token HUD is local-first. Core monitoring and management must work without a Fluent Studio account, and chat content, token telemetry, and provider credentials stay on the user's device by default. Future cloud synchronization or collaboration must be optional, explicit, and data-minimized. Licensing and update checks must remain technically separate from monitored usage data. Provider credentials must not be collected when an on-device integration can perform the work.
 
+## Management Boundary
+
+Token HUD combines observation with safe management. It may open a relevant chat or offer a context-changing Chat Action, such as compaction, only when the provider exposes a supported capability. Unavailable actions remain disabled with an intelligible reason. Every context-changing action is user-initiated in the first release; Token HUD must not automatically compact, archive, or start chats.
+
 ## Brand Personality
 
 Quiet, precise, native. The interface should feel like a focused Windows instrument: calm during normal operation, unmistakable when attention is needed, and never theatrical.

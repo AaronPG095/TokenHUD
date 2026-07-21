@@ -61,7 +61,7 @@ Reading and presenting a chat's state without changing that chat or starting Cod
 _Avoid_: Passive action, monitoring command
 
 **Chat Action**:
-An explicit operation that changes a Codex chat, such as starting context compaction.
+An explicit, user-initiated operation that changes a provider chat through a supported capability, such as starting context compaction.
 _Avoid_: HUD command, automatic fix
 
 **Compact View**:

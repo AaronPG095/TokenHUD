@@ -95,6 +95,7 @@ Account Quota uses one footer line: `QUOTA  5h —  ·  Weekly 68% left`. It has
 - Session Consumption and Highest Child do not appear in Expanded View.
 - The selected chat should explain both token traffic and broad context origin without combining them into a misleading total. Codex provides exact Input, Cached Input, Cache Write, Output, and Reasoning counts; Cached Input is part of Input, and Reasoning is part of Output. A broad origin view should distinguish instruction-like input (including rules) from working history without exposing individual rule or message names. Source attribution is not provided by Codex and must be labelled as estimated if derived locally.
 - Use two compact visuals. The primary Context bar shows exact current Context Load against the 150,000-token budget and divides it into estimated Instructions and Working Context. A secondary Token Flow view shows exact latest-exchange Input split into Cached, Cache Write, and New, plus Output split into Reasoning and Visible. Lifetime totals remain available through tooltips rather than persistent panels.
+- Provide an Open Chat action for the selected chat. Expose context-changing Chat Actions only through supported provider capabilities, keep them user-initiated, and explain disabled states rather than presenting inert controls.
 - Settings are a compact panel, not a separate visual language: context budget, always-on-top, privacy, notifications, monitoring pause, and login startup.
 - No prompt excerpts, first-message previews, or message content appear anywhere.
 
