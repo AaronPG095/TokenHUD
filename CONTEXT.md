@@ -91,3 +91,11 @@ _Avoid_: Offline-only, local storage mode
 **Metrics History**:
 The optional local record of timestamped token measurements and Budget Zone changes used for trends and comparisons. It contains no duplicated prompt, transcript, Chat Name, or filesystem-path content.
 _Avoid_: Chat history, transcript archive, telemetry
+
+**Provider Capability**:
+A provider adapter's explicitly reported ability to observe a metric or perform a Chat Action, together with its support level and current health.
+_Avoid_: Feature flag, assumed compatibility
+
+**Experimental Adapter**:
+A visibly fragile, read-only provider integration that observes undocumented local storage and therefore cannot offer Chat Actions.
+_Avoid_: Supported integration, beta control API

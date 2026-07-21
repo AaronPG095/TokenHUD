@@ -24,6 +24,10 @@ Codex on Windows is the flagship first release and should become reliable, coher
 
 Each operating system receives a native presentation shell: WPF remains the Windows implementation, and macOS should use SwiftUI when that phase begins. Platforms share product language, provider contracts, data schemas, and behavioral test fixtures rather than a forced pixel-level UI implementation. The mechanism for sharing executable core logic is deferred until macOS development starts.
 
+## Provider Integration Policy
+
+Provider integrations use a capability ladder. A Supported Integration relies on an official API or documented local interface and may offer observation plus safe Chat Actions. Local Observation relies on stable exported logs or metadata and remains monitoring-only. An Experimental Adapter relies on undocumented local storage, is visibly marked fragile, and remains read-only. Token HUD never uses screen scraping, keystroke interception, or credential extraction. Every adapter reports its capabilities and health rather than implying feature parity.
+
 ## Permanent Privacy Position
 
 Token HUD is local-first. Core monitoring and management must work without a Fluent Studio account, and chat content, token telemetry, and provider credentials stay on the user's device by default. Future cloud synchronization or collaboration must be optional, explicit, and data-minimized. Licensing and update checks must remain technically separate from monitored usage data. Provider credentials must not be collected when an on-device integration can perform the work.

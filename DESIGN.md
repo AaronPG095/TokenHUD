@@ -134,6 +134,8 @@ Avoid neon AI aesthetics, purple gradients, glass, finance-dashboard density, ga
 - Expand to another provider or operating system only after the Windows Codex experience is reliable and polished.
 - Use native presentation shells: WPF on Windows and SwiftUI for a future macOS application. Share contracts, schemas, terminology, and behavior tests rather than a cross-platform visual implementation.
 - Defer the executable shared-core bridge until macOS development begins; do not rewrite the Windows shell pre-emptively.
+- Model every provider feature as an explicit Provider Capability with support level and health. Unsupported and unhealthy capabilities fail closed.
+- Undocumented local-storage adapters remain visibly Experimental and read-only. Never use screen scraping, keystroke interception, or credential extraction.
 
 ## Budget settings
 
