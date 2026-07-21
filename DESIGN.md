@@ -24,9 +24,9 @@ OKLCH values are the design source of truth. The hex values are the clipped sRGB
 | `Muted` | `oklch(0.48 0.025 280)` | `#5A5C6C` | Supporting text |
 | `Primary` | `oklch(0.50 0.16 280)` | `#5552BB` | Selection and focus |
 | `Accent` | `oklch(0.72 0.12 220)` | `#2FB5D8` | Informational state only |
-| `Healthy` | `oklch(0.60 0.14 155)` | `#1C985A` | Below 112.5k |
-| `Caution` | `oklch(0.72 0.15 80)` | `#D59800` | 112.5k–134,999 |
-| `Critical` | `oklch(0.62 0.20 32)` | `#E5462C` | 135k–149,999 |
+| `Healthy` | `oklch(0.60 0.14 155)` | `#1C985A` | Below 100k |
+| `Caution` | `oklch(0.72 0.15 80)` | `#D59800` | 100k–124,999 |
+| `Critical` | `oklch(0.62 0.20 32)` | `#E5462C` | 125k–149,999 |
 | `OverBudget` | `oklch(0.53 0.22 25)` | `#CD001D` | 150k and above |
 
 ### Dark
@@ -40,9 +40,9 @@ OKLCH values are the design source of truth. The hex values are the clipped sRGB
 | `Muted` | `oklch(0.70 0.02 280)` | `#9C9DAB` | Supporting text |
 | `Primary` | `oklch(0.72 0.14 280)` | `#9499FA` | Selection and focus |
 | `Accent` | `oklch(0.78 0.11 220)` | `#59C8E8` | Informational state only |
-| `Healthy` | `oklch(0.72 0.13 155)` | `#57BC80` | Below 112.5k |
-| `Caution` | `oklch(0.82 0.14 80)` | `#F3B94C` | 112.5k–134,999 |
-| `Critical` | `oklch(0.74 0.17 32)` | `#FF7C63` | 135k–149,999 |
+| `Healthy` | `oklch(0.72 0.13 155)` | `#57BC80` | Below 100k |
+| `Caution` | `oklch(0.82 0.14 80)` | `#F3B94C` | 100k–124,999 |
+| `Critical` | `oklch(0.74 0.17 32)` | `#FF7C63` | 125k–149,999 |
 | `OverBudget` | `oklch(0.68 0.20 25)` | `#FC5855` | 150k and above |
 
 Text and interactive foregrounds must maintain WCAG AA contrast. Semantic colors are never the only carrier of meaning: every state is named and exposed to assistive technology.
@@ -136,4 +136,5 @@ Avoid neon AI aesthetics, purple gradients, glass, finance-dashboard density, ga
 
 - Resolve Context Budget in this order: installation default, provider override, chat override, then model-limit safety cap.
 - Aaron's installation default is 150,000 tokens; product defaults remain configurable for other users.
+- Aaron's Budget Zone boundaries are 100,000 for Caution, 125,000 for Critical, and 150,000 for Over Budget.
 - Compact View shows only the resolved Budget Zone. Expanded tooltips and settings explain inheritance and overrides.

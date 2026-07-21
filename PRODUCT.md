@@ -34,6 +34,8 @@ Token HUD combines observation with safe management. It may open a relevant chat
 
 Each installation has a global default Context Budget; Aaron's default is 150,000 tokens. A provider may override that default, and an individual chat may override its provider. The resolved budget is capped below the active model's actual context limit when the provider reports one. Compact surfaces present only the resulting Budget Zone; inheritance and override controls belong in settings and detail tooltips.
 
+Aaron's Budget Zones treat 100,000 tokens as the intervention point and 150,000 as the firm ceiling: Healthy below 100,000; Caution from 100,000 through 124,999; Critical from 125,000 through 149,999; and Over Budget at 150,000 or above.
+
 ## Brand Personality
 
 Quiet, precise, native. The interface should feel like a focused Windows instrument: calm during normal operation, unmistakable when attention is needed, and never theatrical.

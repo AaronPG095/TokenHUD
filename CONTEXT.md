@@ -13,7 +13,7 @@ The resolved maximum desirable Context Load for one chat. It inherits from the i
 _Avoid_: Context window, token limit, account quota
 
 **Budget Zone**:
-A Context Load classification relative to the Context Budget: healthy, caution, critical, or over budget.
+A profile-configured Context Load classification: Healthy, Caution, Critical, or Over Budget. Aaron's profile uses boundaries of 100,000, 125,000, and 150,000 tokens.
 _Avoid_: Usage tier, rate-limit status
 
 **Context Velocity**:

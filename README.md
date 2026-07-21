@@ -21,7 +21,7 @@ The catalog query deliberately excludes `first_user_message` and `preview`. Roll
 - **Token Flow:** exact latest-exchange input and output accounting. Input distinguishes cached, cache-write, and new tokens; output distinguishes reasoning and visible output.
 - **Context Origin:** a broad, explicitly estimated distinction between instruction-like input and working context. Codex does not expose exact source attribution.
 
-The default context budget is 150,000 tokens. Healthy is below 75%, Caution is 75–89.999%, Critical is 90–99.999%, and Over Budget is 100% or higher.
+Aaron's default Context Budget is 150,000 tokens. His Smart Zones are Healthy below 100,000, Caution from 100,000, Critical from 125,000, and Over Budget from 150,000. Product profiles remain configurable for other users and providers.
 
 ## Architecture
 
