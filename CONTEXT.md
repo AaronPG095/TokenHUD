@@ -87,3 +87,7 @@ _Avoid_: Incognito mode, private monitoring
 **Local-first**:
 A permanent product constraint under which core functionality runs on the user's device without an account, monitored content and telemetry stay on-device by default, and any future cloud feature is optional and data-minimized.
 _Avoid_: Offline-only, local storage mode
+
+**Metrics History**:
+The optional local record of timestamped token measurements and Budget Zone changes used for trends and comparisons. It contains no duplicated prompt, transcript, Chat Name, or filesystem-path content.
+_Avoid_: Chat history, transcript archive, telemetry

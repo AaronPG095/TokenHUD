@@ -56,6 +56,10 @@ The local desktop product should use a one-time paid license, with paid major up
 
 Behavioral analytics are off by default. Crash and diagnostic reports are sent only through manual submission or explicit opt-in, and users must be able to inspect their contents before transmission. Reports exclude chat names, filesystem paths, prompts, transcripts, provider credentials, and token histories. Update checks transmit only the minimum version and platform information, and licensing systems receive no monitored usage data.
 
+## Local Metrics History
+
+Token HUD keeps a rolling, on-device metrics history for expanded analysis, defaulting to 30 days. Users may select Off, 7 days, 30 days, 90 days, or indefinite retention and may erase the history immediately. Stored records are limited to timestamps, opaque provider and chat identifiers, token counts, Context Load, and Budget Zone changes; prompts, transcripts, chat names, and filesystem paths are never duplicated into this store.
+
 ## Anti-references
 
 Avoid gaming overlays, neon AI styling, glass-heavy panels, financial-trading dashboards, decorative charts, and dense telemetry consoles. Do not make routine healthy state visually urgent.

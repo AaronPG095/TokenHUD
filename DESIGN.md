@@ -139,3 +139,10 @@ Avoid neon AI aesthetics, purple gradients, glass, finance-dashboard density, ga
 - Aaron's installation default is 150,000 tokens; product defaults remain configurable for other users.
 - Aaron's Budget Zone boundaries are 100,000 for Caution, 125,000 for Critical, and 150,000 for Over Budget.
 - Compact View shows only the resolved Budget Zone. Expanded tooltips and settings explain inheritance and overrides.
+
+## Local data controls
+
+- Metrics History defaults to a rolling 30-day retention period, with Off, 7-day, 30-day, 90-day, and indefinite options.
+- Settings provide an immediate Clear Metrics History action with confirmation.
+- Historical records contain only timestamps, opaque provider/chat identifiers, token counts, Context Load, and Budget Zone changes.
+- Prompt, transcript, Chat Name, and filesystem-path content must never enter Metrics History.
