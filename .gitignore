@@ -12,3 +12,5 @@ publish/
 # Local diagnostics and packaging output
 *.log
 outputs/
+.worktrees/
+.env
