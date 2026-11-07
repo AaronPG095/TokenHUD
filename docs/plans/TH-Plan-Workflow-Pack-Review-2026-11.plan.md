@@ -1,12 +1,16 @@
 ---
 title: Plan - Process: Sync token-lean pack and review workflow from AI-Dev-Workflow
 ticket: https://app.notion.com/p/TH-Plan-Process-Sync-token-lean-pack-and-review-workflow-from-AI-Dev-Workflow-4110b9c6786f817c97e7f25dea0ccf68
-status: planned
+status: in-progress
 priority: medium
 state: quick
 due: 
 devTicketKey: TH:TH-Plan-Workflow-Pack-Review-2026-11
 agent: Gemini
+branch: chore/workflow-v2
+worktree: workflow-v2
+reviewedBy: Gemini
+reviewVerdict: pass
 ---
 # Sync token-lean pack and review workflow from AI-Dev-Workflow
 
@@ -42,3 +46,4 @@ Product code changes.
 - Aaron approved rolling out the updated AGENTS.md and workflow across all five repositories ("Add the agents.md and roll out to all five repos.", 2026-11-07).
 
 ## Progress log
+- 2026-11-07 12:56 UTC, Gemini (review: pass): All 26 ticket tests pass, skills mirrored, AGENTS.md updated
