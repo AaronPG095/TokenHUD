@@ -1,7 +1,7 @@
 ---
 title: Plan - Process: AI Dev Workflow rollout
 ticket: https://app.notion.com/p/TH-Plan-Process-AI-Dev-Workflow-rollout-4150b9c6786f81ce8307d7a2cc059e7e
-status: in-progress
+status: shipped
 devTicketKey: TH:TH-Plan-AI-Dev-Workflow-27c67cd8cd07-2026-11
 agent: Codex
 branch: codex/adw-rollout-27c67cd8cd07
@@ -9,6 +9,7 @@ worktree: TokenHUD
 reviewedBy: Codex
 reviewVerdict: pass
 reviewFingerprint: 805c4cb98a3f59b9941d5c032d5214a770270479ffd831b1e7e308289ef6edb7
+pr: https://github.com/AaronPG095/TokenHUD/pull/5
 ---
 
 # Plan - Process: AI Dev Workflow rollout
