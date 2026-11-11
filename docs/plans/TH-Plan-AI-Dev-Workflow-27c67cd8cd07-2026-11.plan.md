@@ -12,11 +12,11 @@ worktree: TokenHUD
 
 ## Summary
 
-Sync the reviewed AI Dev Workflow release 27c67cd8cd0720b06a6c73329e5c05bb765ca7a3 to AaronPG095/TokenHUD. Preserve this repository's tracker configuration and project files.
+Sync the reviewed AI Dev Workflow release e58673fd921628bedd6bddabe57d8c05a5c2d024 to AaronPG095/TokenHUD. Preserve this repository's tracker configuration and project files.
 
 ## Acceptance criteria
 
-- [x] The pinned release matches the downstream managed workflow and preserves the repository configuration. verified: Sync check passed at 27c67cd8cd0720b06a6c73329e5c05bb765ca7a3 and SHA-256 of downstream config is unchanged.
+- [x] The pinned release matches the downstream managed workflow and preserves the repository configuration. verified: Sync check passed at e58673fd921628bedd6bddabe57d8c05a5c2d024 and SHA-256 of downstream config is unchanged.
 - [x] The installed Node workflow suite passes. verified: node --test scripts/ticket.test.mjs passed all 67 tests.
 
 ## Steps

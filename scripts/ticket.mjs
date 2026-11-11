@@ -2476,7 +2476,7 @@ const commands = {
       const ticket = plan.meta.ticket || '';
       const validIdentity = isLocal
         ? ticket === `local://${ticketKey(plan)}`
-        : /^https:\/\/(?:www\.)?notion\.so\/[^?#]*[\da-f]{8}(?:-?[\da-f]{4}){3}-?[\da-f]{12}(?:[?#].*)?$/i.test(ticket);
+        : /^https:\/\/(?:(?:www\.)?notion\.so\/|app\.notion\.com\/p\/)[^?#]*[\da-f]{8}(?:-?[\da-f]{4}){3}-?[\da-f]{12}(?:[?#].*)?$/i.test(ticket);
       if (!validIdentity) found.push('ticket does not match the configured tracker and plan identity');
       if (original) {
         for (const item of missingCheckboxes(bodyOf(original), plan.body))

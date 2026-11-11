@@ -1003,6 +1003,25 @@ test('ci-check requires a plan for workflow policy changes', (t) => {
   assert.equal(trivial.status, 0, trivial.stderr);
 });
 
+test('ci-check accepts the canonical Notion app page URL only on a trusted host', (t) => {
+  const f = fixture(t);
+  f.git('init', '-b', 'main');
+  f.git('config', 'user.name', 'Test');
+  f.git('config', 'user.email', 'test@example.invalid');
+  f.git('add', 'scripts');
+  f.git('commit', '-m', 'base');
+  const base = f.git('rev-parse', 'HEAD');
+  const plan = readFileSync(f.plan, 'utf8');
+  const check = (host) => {
+    writeFileSync(f.plan, plan.replace('status: draft', `status: in-progress\nticket: https://${host}/p/Test-40a0b9c6786f817fab0ff2059ad410e3`));
+    f.git('add', 'docs/plans');
+    f.git('commit', '-m', 'set ticket URL');
+    return f.run('ci-check', ['--base', base, '--head', 'HEAD'], [], { omitPlan: true });
+  };
+  assert.equal(check('app.notion.com').status, 0);
+  assert.match(check('app.notion.com.example.org').stderr, /ticket does not match/);
+});
+
 test('ci-check validates committed plan identity, evidence, hygiene, and review scope', (t) => {
   const f = fixture(t, 'ticket: local://FO:FO-Plan-Test\n', [], {
     tracker: 'local',
