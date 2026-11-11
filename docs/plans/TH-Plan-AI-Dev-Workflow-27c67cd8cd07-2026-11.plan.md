@@ -6,6 +6,9 @@ devTicketKey: TH:TH-Plan-AI-Dev-Workflow-27c67cd8cd07-2026-11
 agent: Codex
 branch: codex/adw-rollout-27c67cd8cd07
 worktree: TokenHUD
+reviewedBy: Codex
+reviewVerdict: pass
+reviewFingerprint: 805c4cb98a3f59b9941d5c032d5214a770270479ffd831b1e7e308289ef6edb7
 ---
 
 # Plan - Process: AI Dev Workflow rollout
@@ -29,3 +32,5 @@ Sync the reviewed AI Dev Workflow release e58673fd921628bedd6bddabe57d8c05a5c2d0
 Approval: Plan approved. Execute the entire plan instead of just doing little bits of it.
 
 ## Progress log
+- 2026-11-11 13:50 UTC, Codex (handoff): Done: Pinned workflow bundle checked and full suite passed.; Next: Verify GitHub checks and merge the rollout PR.; Open: none; Tree: clean
+- 2026-11-11 13:50 UTC, Codex (review: pass): Pinned bundle, unchanged config, and the full workflow suite verified. Review includes the canonical Notion URL fix.
