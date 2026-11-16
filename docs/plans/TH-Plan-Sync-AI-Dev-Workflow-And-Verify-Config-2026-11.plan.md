@@ -14,8 +14,8 @@ branch: chore/sync-workflow
 worktree: TokenHUD
 reviewedBy: Gemini
 reviewVerdict: warn
-reviewSelfReason: Synced workflow bundle and verify config; 87/87 ticket tests and dotnet build pass while SelfTest rollout checks skipped offline
-reviewFingerprint: 6d911de4973ea9a5aa32b2fdd6b0612cede049a7c564abfdc2bf29999140b322
+reviewSelfReason: Compatible verified: tag syntax for origin/main V4 ci-check
+reviewFingerprint: 5024c5b47dea682ea12db3a423bd6ca9d8e9ac4cbd99a3c1fdfa6570343fcf55
 pr: https://github.com/AaronPG095/TokenHUD/pull/7
 ---
 # Sync AI Dev Workflow And Verify Config
@@ -34,7 +34,7 @@ None
 
 ## Acceptance criteria
 
-- [x] AC1: Synced workflow CLI passes 87 tests via node --test scripts/ticket.test.mjs. verified(test): node --test scripts/ticket.test.mjs passed 87/87 tests
+- [x] AC1: Synced workflow CLI passes 87 tests via node --test scripts/ticket.test.mjs. verified: node --test scripts/ticket.test.mjs passed 87/87 tests
 - [ ] AC2: Project tests pass via dotnet run --project tests/TokenHud.SelfTest and ticket.mjs check passes. deferred: TokenHud.SelfTest requires live Codex rollout logs on disk (3/5 offline checks passed; dotnet build TokenHud.slnx and check passed)
 
 ## Steps
@@ -58,3 +58,4 @@ TokenHUD application source code and README/NEXT notes.
 
 <!-- One line per session/review, added with `ticket.mjs log` or `ticket.mjs review` -->
 - 2026-11-16 11:07 UTC, Gemini (review: warn): Workflow sync and dotnet build verified (87/87 ticket tests pass); TokenHud.SelfTest 2 rollout-dependent checks deferred cleanly. [self-review: Synced workflow bundle and verify config; 87/87 ticket tests and dotnet build pass while SelfTest rollout checks skipped offline]
+- 2026-11-16 11:14 UTC, Gemini (review: warn): Updated evidence tag to verified: for BASE_SHA V4 compatibility; dotnet build and 87/87 ticket tests pass. [self-review: Compatible verified: tag syntax for origin/main V4 ci-check]
