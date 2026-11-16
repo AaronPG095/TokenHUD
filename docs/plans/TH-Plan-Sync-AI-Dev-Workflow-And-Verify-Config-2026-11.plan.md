@@ -1,7 +1,7 @@
 ---
 title: Plan - Process: Sync AI Dev Workflow And Verify Config
 ticket: https://app.notion.com/p/TH-Plan-Process-Sync-AI-Dev-Workflow-And-Verify-Config-41a0b9c6786f81fd8f94e9c136d2dee1
-status: in-progress
+status: shipped
 priority: 
 state: 
 due: 
@@ -16,6 +16,7 @@ reviewedBy: Gemini
 reviewVerdict: warn
 reviewSelfReason: Synced workflow bundle and verify config; 87/87 ticket tests and dotnet build pass while SelfTest rollout checks skipped offline
 reviewFingerprint: 6d911de4973ea9a5aa32b2fdd6b0612cede049a7c564abfdc2bf29999140b322
+pr: https://github.com/AaronPG095/TokenHUD/pull/7
 ---
 # Sync AI Dev Workflow And Verify Config
 
