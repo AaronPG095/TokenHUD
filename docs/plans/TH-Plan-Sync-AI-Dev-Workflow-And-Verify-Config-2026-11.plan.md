@@ -1,7 +1,7 @@
 ---
 title: Plan - Process: Sync AI Dev Workflow And Verify Config
 ticket: https://app.notion.com/p/TH-Plan-Process-Sync-AI-Dev-Workflow-And-Verify-Config-41a0b9c6786f81fd8f94e9c136d2dee1
-status: planned
+status: in-progress
 priority: 
 state: 
 due: 
@@ -10,6 +10,12 @@ version:
 impact: 
 devTicketKey: TH:TH-Plan-Sync-AI-Dev-Workflow-And-Verify-Config-2026-11
 agent: Gemini
+branch: chore/sync-workflow
+worktree: TokenHUD
+reviewedBy: Gemini
+reviewVerdict: warn
+reviewSelfReason: Synced workflow bundle and verify config; 87/87 ticket tests and dotnet build pass while SelfTest rollout checks skipped offline
+reviewFingerprint: 6d911de4973ea9a5aa32b2fdd6b0612cede049a7c564abfdc2bf29999140b322
 ---
 # Sync AI Dev Workflow And Verify Config
 
@@ -27,13 +33,13 @@ None
 
 ## Acceptance criteria
 
-- [ ] AC1: Synced workflow CLI passes 87 tests via node --test scripts/ticket.test.mjs.
-- [ ] AC2: Project tests pass via dotnet run --project tests/TokenHud.SelfTest and ticket.mjs check passes.
+- [x] AC1: Synced workflow CLI passes 87 tests via node --test scripts/ticket.test.mjs. verified(test): node --test scripts/ticket.test.mjs passed 87/87 tests
+- [ ] AC2: Project tests pass via dotnet run --project tests/TokenHud.SelfTest and ticket.mjs check passes. deferred: TokenHud.SelfTest requires live Codex rollout logs on disk (3/5 offline checks passed; dotnet build TokenHud.slnx and check passed)
 
 ## Steps
 
-- [ ] Run dotnet run --project tests/TokenHud.SelfTest (AC2)
-- [ ] Run node --test scripts/ticket.test.mjs and verify workflow sync (AC1)
+- [ ] Run dotnet run --project tests/TokenHud.SelfTest (AC2) deferred: TokenHud.SelfTest requires live Codex rollout logs on disk (3/5 offline checks passed; dotnet build TokenHud.slnx passed)
+- [x] Run node --test scripts/ticket.test.mjs and verify workflow sync (AC1)
 
 ## Risks
 
@@ -50,3 +56,4 @@ TokenHUD application source code and README/NEXT notes.
 ## Progress log
 
 <!-- One line per session/review, added with `ticket.mjs log` or `ticket.mjs review` -->
+- 2026-11-16 11:07 UTC, Gemini (review: warn): Workflow sync and dotnet build verified (87/87 ticket tests pass); TokenHud.SelfTest 2 rollout-dependent checks deferred cleanly. [self-review: Synced workflow bundle and verify config; 87/87 ticket tests and dotnet build pass while SelfTest rollout checks skipped offline]
