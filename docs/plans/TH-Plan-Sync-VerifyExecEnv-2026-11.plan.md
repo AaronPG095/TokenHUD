@@ -1,7 +1,7 @@
 ---
 title: Plan - Chore: Sync VerifyExecEnv Fix
 ticket: https://app.notion.com/p/TH-Plan-Chore-Sync-VerifyExecEnv-Fix-41b0b9c6786f814dac15c37006f7cc7a
-status: in-progress
+status: shipped
 priority: 
 state: 
 due: 
@@ -16,6 +16,7 @@ reviewedBy: Gemini
 reviewVerdict: pass
 reviewSession: eac85e12-eef0-40ca-b76d-65516f98739e
 reviewFingerprint: 9662cbf8e4cd37e90cc33c56bfb612fc6c28d3ff29a28ca19b671058c4682508
+pr: https://github.com/AaronPG095/TokenHUD/pull/9
 ---
 # Sync VerifyExecEnv Fix
 
