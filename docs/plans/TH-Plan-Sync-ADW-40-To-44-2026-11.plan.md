@@ -1,7 +1,7 @@
 ---
 title: Plan - Chore: Sync ADW 40 To 44
 ticket: https://app.notion.com/p/TH-Plan-Chore-Sync-ADW-40-To-44-41d0b9c6786f8159a2a7e00dc51d46d6
-status: in-progress
+status: shipped
 priority: 
 state: 
 due: 
@@ -17,6 +17,7 @@ reviewVerdict: pass
 reviewSession: 30e83ae2-7909-43a3-ba93-a7d7c2c21931
 baseBranch: main
 reviewFingerprint: 0f98cbac1d0e8b05360840100f7284129e3f635088ccf621cacec37175326d09
+pr: https://github.com/AaronPG095/TokenHUD/pull/10
 ---
 # Sync ADW 40 To 44
 ## Summary
