@@ -1,7 +1,7 @@
 ---
 title: Plan - Feature: Windows Release Readiness
 ticket: https://app.notion.com/p/TH-Plan-Feature-Windows-Release-Readiness-4220b9c6786f817494cbfa733971e31b
-status: in-progress
+status: shipped
 appetite: L
 impact: minor
 devTicketKey: TH:TH-Plan-Windows-Release-Readiness-2026-11
@@ -14,6 +14,7 @@ reviewModel: gpt-6.2-sol
 reviewSession: /root/layout_audit
 baseBranch: main
 reviewFingerprint: 933af0a2f54cc3fd08947ce942b80de0a09189f0fbf7578d1f5bca22b8460ea4
+pr: https://github.com/AaronPG095/TokenHUD/pull/17
 ---
 # Windows Release Readiness
 
