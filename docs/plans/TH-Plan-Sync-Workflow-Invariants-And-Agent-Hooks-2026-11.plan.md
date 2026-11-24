@@ -1,7 +1,7 @@
 ---
 title: Plan - Chore: Sync Workflow Invariants And Agent Hooks
 ticket: https://app.notion.com/p/TH-Plan-Chore-Sync-Workflow-Invariants-And-Agent-Hooks-4220b9c6786f81e982dacde24582dc00
-status: in-progress
+status: shipped
 priority: 
 state: 
 due: 
@@ -18,6 +18,7 @@ reviewVerdict: pass
 reviewSession: 3772d675-9632-4b37-80a3-afdb49a89ff5
 baseBranch: main
 reviewFingerprint: a0e120809b776ab6ca174461afdd28f945bfc075345b2a6d93c55d3d564fcb96
+pr: https://github.com/AaronPG095/TokenHUD/pull/12
 ---
 # Sync Workflow Invariants And Agent Hooks
 
