@@ -8,6 +8,12 @@ devTicketKey: TH:TH-Plan-Windows-Release-Readiness-2026-11
 agent: Codex
 branch: codex/tokenhud-windows-release
 worktree: TokenHUD
+reviewedBy: Codex
+reviewVerdict: pass
+reviewModel: gpt-6.2-sol
+reviewSession: /root/layout_audit
+baseBranch: main
+reviewFingerprint: 933af0a2f54cc3fd08947ce942b80de0a09189f0fbf7578d1f5bca22b8460ea4
 ---
 # Windows Release Readiness
 
@@ -52,3 +58,5 @@ Public publication, certificate issuance, changes to the user’s live install a
 Aaron approved the five-plan Windows scope with “Agreed” on 2026-11-24.
 
 ## Progress log
+- 2026-11-24 16:42 UTC, Codex (review: block): Shell cleanup was not retryable after app removal and settings fallback could overwrite an unread existing file. (model: gpt-6.2-sol)
+- 2026-11-24 16:44 UTC, Codex (review: pass): Retryable shell cleanup and preservation of unread settings resolved. Independent pack passed all 15 tests. [reviewer: /root/layout_audit] (model: gpt-6.2-sol)

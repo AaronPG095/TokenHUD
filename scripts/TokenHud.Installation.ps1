@@ -104,16 +104,27 @@ function Set-TokenHudShortcut([string] $Executable) {
 }
 
 function Remove-TokenHudShellEntries([string] $Executable) {
-    $path = Get-TokenHudShortcutPath
-    if (Test-Path -LiteralPath $path -PathType Leaf) {
-        $shell = New-Object -ComObject WScript.Shell
-        $shortcut = $shell.CreateShortcut($path)
-        if ($shortcut.TargetPath -eq $Executable) { Remove-Item -LiteralPath $path }
+    $errors = [Collections.Generic.List[string]]::new()
+    try {
+        $path = Get-TokenHudShortcutPath
+        if (Test-Path -LiteralPath $path -PathType Leaf) {
+            $shell = New-Object -ComObject WScript.Shell
+            $shortcut = $shell.CreateShortcut($path)
+            if ($shortcut.TargetPath -eq $Executable) { Remove-Item -LiteralPath $path }
+        }
     }
+    catch { $errors.Add("Start menu: $($_.Exception.Message)") }
 
-    $runKey = 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Run'
-    $run = Get-ItemProperty -LiteralPath $runKey -Name TokenHUD -ErrorAction SilentlyContinue
-    if ($run.TokenHUD -eq ('"{0}" --startup' -f $Executable)) {
-        Remove-ItemProperty -LiteralPath $runKey -Name TokenHUD
+    try {
+        $runKey = 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Run'
+        if (Test-Path -LiteralPath $runKey) {
+            $run = Get-ItemProperty -LiteralPath $runKey
+            if ($run.TokenHUD -eq ('"{0}" --startup' -f $Executable)) {
+                Remove-ItemProperty -LiteralPath $runKey -Name TokenHUD
+            }
+        }
     }
+    catch { $errors.Add("Startup registration: $($_.Exception.Message)") }
+
+    if ($errors.Count -gt 0) { throw "Retry shell cleanup: $($errors -join '; ')" }
 }

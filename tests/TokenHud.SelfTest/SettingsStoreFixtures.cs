@@ -35,6 +35,23 @@ internal static class SettingsStoreFixtures
             }
 
             Check((await store.LoadAsync()).ContextBudget == 130_000, "A cancelled save changed the last committed settings.");
+            var recovering = new SettingsStore(paths);
+            await using (var locked = new FileStream(paths.Settings, FileMode.Open, FileAccess.Read, FileShare.None))
+            {
+                Check((await recovering.LoadAsync()).ContextBudget == 150_000, "A locked settings file prevented fallback startup.");
+            }
+
+            try
+            {
+                await recovering.SaveAsync(new HudSettings());
+                throw new InvalidOperationException("Fallback settings overwrote an unread existing file.");
+            }
+            catch (IOException)
+            {
+            }
+            Check((await recovering.LoadAsync()).ContextBudget == 130_000, "The saved settings were lost after the lock was released.");
+            await recovering.SaveAsync(new HudSettings { ContextBudget = 135_000 });
+            Check((await recovering.LoadAsync()).ContextBudget == 135_000, "A successful read did not resume normal saves.");
             await File.WriteAllTextAsync(paths.Settings, "{\"AlertStates\":null}");
             Check((await store.LoadAsync()).AlertStates.Count == 0, "Older settings with a null alert dictionary must load safely.");
         }

@@ -48,6 +48,7 @@ public sealed class SettingsStore
 {
     private static readonly JsonSerializerOptions Options = new() { WriteIndented = true };
     private readonly AppDataPaths _paths;
+    private bool _existingSettingsUnreadable;
     private readonly SemaphoreSlim _saveGate = new(1, 1);
 
     public SettingsStore(AppDataPaths paths)
@@ -57,11 +58,6 @@ public sealed class SettingsStore
 
     public async Task<HudSettings> LoadAsync(CancellationToken cancellationToken = default)
     {
-        if (!File.Exists(_paths.Settings))
-        {
-            return new HudSettings();
-        }
-
         try
         {
             await using var stream = new FileStream(_paths.Settings, FileMode.Open, FileAccess.Read, FileShare.Read | FileShare.Delete);
@@ -71,10 +67,17 @@ public sealed class SettingsStore
             settings.ChatContextBudgets ??= new Dictionary<string, long>(StringComparer.Ordinal);
             settings.AlertPreferences ??= new BudgetAlertPreferences();
             settings.BudgetAlertStates ??= new Dictionary<string, BudgetAlertState>(StringComparer.Ordinal);
+            _existingSettingsUnreadable = false;
             return settings;
         }
-        catch (Exception exception) when (exception is JsonException or IOException or UnauthorizedAccessException)
+        catch (Exception exception) when (exception is FileNotFoundException or DirectoryNotFoundException or JsonException)
         {
+            _existingSettingsUnreadable = false;
+            return new HudSettings();
+        }
+        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
+        {
+            _existingSettingsUnreadable = true;
             return new HudSettings();
         }
     }
@@ -86,6 +89,11 @@ public sealed class SettingsStore
         await _saveGate.WaitAsync(cancellationToken).ConfigureAwait(false);
         try
         {
+            if (_existingSettingsUnreadable)
+            {
+                throw new IOException("Existing settings could not be read and must be preserved.");
+            }
+
             Directory.CreateDirectory(_paths.Root);
             var temporary = $"{_paths.Settings}.{Guid.NewGuid():N}.tmp";
             try

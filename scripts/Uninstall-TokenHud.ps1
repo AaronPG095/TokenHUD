@@ -12,15 +12,13 @@ $root = Get-TokenHudInstallRoot $InstallRoot -NoShellIntegration:$NoShellIntegra
 $lock = Enter-TokenHudInstallLock $root
 try {
     $app = Join-Path $root 'app'
-    if (-not (Test-Path -LiteralPath $app)) {
-        Write-Output 'TokenHUD is already uninstalled.'
-        return
+    $exe = Join-Path $app 'TokenHUD.exe'
+    if (Test-Path -LiteralPath $app) {
+        Assert-TokenHudOwned $root $app
+        Assert-TokenHudStopped $exe
+        Remove-TokenHudChild $root $app
     }
 
-    $exe = Join-Path $app 'TokenHUD.exe'
-    Assert-TokenHudOwned $root $app
-    Assert-TokenHudStopped $exe
-    Remove-TokenHudChild $root $app
     if (-not $NoShellIntegration) { Remove-TokenHudShellEntries $exe }
     Write-Output 'TokenHUD was uninstalled. Settings and metrics history were preserved.'
 }
