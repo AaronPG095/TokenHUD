@@ -81,14 +81,25 @@ public partial class MainWindow
         }
         if (reading.LatestExchange is { } exchange)
         {
-            values.Add($"Latest exchange {Metric(exchange.InputTokens)} input · {Metric(exchange.OutputTokens)} output");
+            var detail = $"Latest exchange {Metric(exchange.InputTokens)} input · {Metric(exchange.OutputTokens)} output";
+            if (exchange.CachedInputTokens is { } cached)
+            {
+                detail += $" · {Metric(cached)} cached input";
+            }
+            if (exchange.ReasoningOutputTokens is { } reasoning)
+            {
+                detail += $" · {Metric(reasoning)} reasoning output";
+            }
+            values.Add(detail);
         }
         foreach (var quota in reading.AccountQuotas.Where(quota => quota.ResetsAt is null || quota.ResetsAt > now))
         {
             var label = quota.Kind switch
             {
                 "five-hour" => "5h quota",
+                "daily" => "Daily quota",
                 "weekly" => "Weekly quota",
+                "monthly" => "Monthly quota",
                 _ => "Account quota",
             };
             var remaining = quota.RemainingPercent is { } percent
@@ -105,7 +116,9 @@ public partial class MainWindow
         var ratio = context.UsedPercent is { } percent ? $" ({percent:0.#}%)" : string.Empty;
         if (context.Tokens is null)
         {
-            return context.UsedPercent is { } reported ? $"{reported:0.#}% used" : "unavailable";
+            return context.UsedPercent is { } reported ? $"{reported:0.#}% used"
+                : context.CapacityTokens is { } capacityOnly ? $"usage unavailable · capacity {Metric(capacityOnly)} tokens"
+                : "unavailable";
         }
 
         return context.CapacityTokens is { } capacity

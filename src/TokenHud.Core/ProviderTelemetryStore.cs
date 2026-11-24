@@ -9,7 +9,7 @@ public sealed class ProviderTelemetryStore
 {
     public const int SchemaVersion = 1;
     public const int MaximumInputBytes = 16 * 1024;
-    private const int MaximumReadings = 100;
+    private const int MaximumReadingsPerSource = 20;
     private const long MaximumTokens = 1_000_000_000_000;
     private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web)
     {
@@ -40,7 +40,7 @@ public sealed class ProviderTelemetryStore
         try
         {
             Directory.CreateDirectory(_directory);
-            var path = Path.Combine(_directory, reading.SessionKey + ".json");
+            var path = Path.Combine(_directory, ReadingFileName(reading));
             // Keep the comparison and replace in one critical section across ingest processes.
             using var writeGate = await AcquireWriteGateAsync(cancellationToken).ConfigureAwait(false);
             var previous = await ReadFileAsync(path, now, cancellationToken).ConfigureAwait(false);
@@ -94,18 +94,24 @@ public sealed class ProviderTelemetryStore
 
         try
         {
-            var candidates = new DirectoryInfo(_directory).EnumerateFiles("*.json")
-                .Where(file => IsSessionKey(Path.GetFileNameWithoutExtension(file.Name)))
-                .OrderByDescending(file => file.LastWriteTimeUtc)
-                .ThenBy(file => file.Name, StringComparer.Ordinal)
-                .Take(MaximumReadings);
-            foreach (var file in candidates)
+            var directory = new DirectoryInfo(_directory);
+            foreach (var source in SourceIds)
             {
-                cancellationToken.ThrowIfCancellationRequested();
-                var reading = await ReadFileAsync(file.FullName, now, cancellationToken).ConfigureAwait(false);
-                if (reading is not null && file.Name == reading.SessionKey + ".json")
+                var prefix = source + ".";
+                var candidates = directory.EnumerateFiles(prefix + "*.json")
+                    .Where(file => Path.GetFileNameWithoutExtension(file.Name) is { } stem &&
+                        stem.StartsWith(prefix, StringComparison.Ordinal) && IsSessionKey(stem[prefix.Length..]))
+                    .OrderByDescending(file => file.LastWriteTimeUtc)
+                    .ThenBy(file => file.Name, StringComparer.Ordinal)
+                    .Take(MaximumReadingsPerSource);
+                foreach (var file in candidates)
                 {
-                    recent.Add(reading);
+                    cancellationToken.ThrowIfCancellationRequested();
+                    var reading = await ReadFileAsync(file.FullName, now, cancellationToken).ConfigureAwait(false);
+                    if (reading is not null && file.Name == ReadingFileName(reading))
+                    {
+                        recent.Add(reading);
+                    }
                 }
             }
         }
@@ -116,6 +122,8 @@ public sealed class ProviderTelemetryStore
 
         return recent.OrderByDescending(reading => reading.ObservedAt).ToArray();
     }
+
+    private static string ReadingFileName(ProviderReading reading) => $"{reading.SourceId}.{reading.SessionKey}.json";
 
     private async Task<FileStream> AcquireWriteGateAsync(CancellationToken cancellationToken)
     {

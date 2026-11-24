@@ -8,6 +8,9 @@ devTicketKey: TH:TH-Plan-Provider-Telemetry-Foundation-2026-11
 agent: Codex
 branch: codex/tokenhud-provider-telemetry
 worktree: TokenHUD
+reviewedBy: Codex
+reviewVerdict: block
+reviewModel: gpt-6.2-sol
 ---
 # Provider Telemetry Foundation
 
@@ -51,3 +54,4 @@ Individual vendor wire adapters, live account setup, model-traffic capture, and 
 On 2026-11-24 Aaron wrote “We want this to be implemented” and replied “Continue.” after the separate provider plan was proposed.
 
 ## Progress log
+- 2026-11-24 16:35 UTC, Codex (review: block): Capacity-only, cached and reasoning-only metrics and quota-window labels were incomplete; a global file bound could hide other providers. (model: gpt-6.2-sol)

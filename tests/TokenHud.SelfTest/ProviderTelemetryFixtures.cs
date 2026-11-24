@@ -42,7 +42,7 @@ internal static class ProviderTelemetryFixtures
 
             var stored = root.GetFiles("*.json").Single();
             var content = await File.ReadAllTextAsync(stored.FullName);
-            Check(stored.Name == reading.SessionKey + ".json" &&
+            Check(stored.Name == reading.SourceId + "." + reading.SessionKey + ".json" &&
                   reading.SessionKey.Length == 64 &&
                   !content.Contains("private-", StringComparison.Ordinal) &&
                   !content.Contains("secret-value", StringComparison.Ordinal),
@@ -86,9 +86,25 @@ internal static class ProviderTelemetryFixtures
                 Check(await ImportAsync(store, invalid, now) == ProviderImportResult.Invalid, "Invalid input was accepted.");
             }
 
-            await File.WriteAllTextAsync(Path.Combine(root.FullName, new string('c', 64) + ".json"), "malformed");
+            await File.WriteAllTextAsync(Path.Combine(root.FullName, "cursor." + new string('c', 64) + ".json"), "malformed");
             Check((await store.LoadAsync(now)).Count == 2 && !root.GetFiles("*.tmp").Any(),
                 "Malformed persisted input or temporary files interfered with legitimate readings.");
+            for (var index = 0; index < 24; index++)
+            {
+                var extra = JsonSerializer.Serialize(new
+                {
+                    version = 1,
+                    sourceId = "claude-code",
+                    sessionId = $"extra-session-{index}",
+                    observedAt = now,
+                    latestExchange = new { inputTokens = 1 },
+                });
+                Check(await ImportAsync(store, extra, now) == ProviderImportResult.Imported, "Additional valid session was rejected.");
+            }
+
+            var crowded = await store.LoadAsync(now);
+            Check(crowded.Count(item => item.SourceId == "claude-code") == 20 && crowded.Any(item => item.SourceId == "cursor"),
+                "One provider's session volume obscured another source.");
         }
         finally
         {
