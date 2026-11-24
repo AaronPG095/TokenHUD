@@ -1,7 +1,7 @@
 ---
 title: Plan - Feature: Provider Telemetry Foundation
 ticket: https://app.notion.com/p/TH-Plan-Feature-Provider-Telemetry-Foundation-4220b9c6786f8127b690f60dc5e596fa
-status: in-progress
+status: shipped
 appetite: L
 impact: minor
 devTicketKey: TH:TH-Plan-Provider-Telemetry-Foundation-2026-11
@@ -14,6 +14,7 @@ reviewModel: gpt-6.2-sol
 reviewSession: /root/compact_reviewer
 baseBranch: main
 reviewFingerprint: 5bbeda8120e87b8d7aba0737d5d1b625c503f5d79adf21606f728a6ccb6a0eaa
+pr: https://github.com/AaronPG095/TokenHUD/pull/18
 ---
 # Provider Telemetry Foundation
 
