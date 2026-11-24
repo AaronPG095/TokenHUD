@@ -1,7 +1,7 @@
 ---
 title: Plan - Bug: Reliable Token HUD Readings
 ticket: https://app.notion.com/p/TH-Plan-Bug-Reliable-Token-HUD-Readings-4220b9c6786f816c921cce14bc620d61
-status: in-progress
+status: shipped
 appetite: M
 impact: patch
 devTicketKey: TH:TH-Plan-Reliable-Token-HUD-Readings-2026-11
@@ -14,6 +14,7 @@ reviewModel: gpt-6.2-sol
 reviewSession: /root/readings_reviewer
 baseBranch: main
 reviewFingerprint: 251399d4c6223b8d6334ebe264a00038bed0d2cc82cd39ba30dfa54934a5cd7c
+pr: https://github.com/AaronPG095/TokenHUD/pull/11
 ---
 # Reliable Token HUD Readings
 
