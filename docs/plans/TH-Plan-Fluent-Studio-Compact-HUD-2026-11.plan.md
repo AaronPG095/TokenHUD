@@ -1,7 +1,7 @@
 ---
 title: Plan - Feature: Fluent Studio Compact HUD
 ticket: https://app.notion.com/p/TH-Plan-Feature-Fluent-Studio-Compact-HUD-4220b9c6786f818f9ba7d97cccf354e3
-status: in-progress
+status: shipped
 appetite: M
 impact: minor
 devTicketKey: TH:TH-Plan-Fluent-Studio-Compact-HUD-2026-11
@@ -14,6 +14,7 @@ reviewModel: gpt-6.2-sol
 reviewSession: /root/compact_reviewer
 baseBranch: main
 reviewFingerprint: 5b29801333b6dd3ba8d8dd966d5c376c77d723524c7e580fb71e8e789d312aaf
+pr: https://github.com/AaronPG095/TokenHUD/pull/13
 ---
 # Fluent Studio Compact HUD
 
