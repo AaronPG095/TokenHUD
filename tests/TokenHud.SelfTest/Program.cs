@@ -7,6 +7,7 @@ var tests = new List<(string Name, Func<Task> Run)>
     ("keeps diagnostic export operational and private", VerifyDiagnosticPrivacyAsync),
     ("preserves settings across cancelled and concurrent saves", SettingsStoreFixtures.VerifyInterruptedAndOverlappingSavesAsync),
     ("imports allowlisted local provider readings", ProviderTelemetryFixtures.RunAsync),
+    ("projects Claude Code and Antigravity status lines", VendorStatusLineFixtures.RunAsync),
     ("enforces budget boundaries", BudgetBoundariesAsync),
     ("resolves inherited budgets against current model limits", ContextBudgetTests.ResolvesHierarchyAndReportedLimitsAsync),
     ("deduplicates zone alerts and respects cooldown and snooze", BudgetAlertTests.RunAsync),
