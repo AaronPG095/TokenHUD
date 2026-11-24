@@ -323,6 +323,7 @@ public partial class MainWindow : Window
     private void UpdateMonitorStatus()
     {
         UpdateAlertControls();
+        PruneHistoryWhenDue(DateTimeOffset.UtcNow);
         var snapshot = _snapshot;
         var paused = !_demo && _settings.MonitoringPaused;
         // Allow three missed polling intervals before marking a running monitor stale.

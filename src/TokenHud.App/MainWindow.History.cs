@@ -12,6 +12,8 @@ public partial class MainWindow
     private readonly MetricsHistoryStore? _history;
     private readonly SemaphoreSlim _historyWrites = new(1, 1);
     private long _historyRevision;
+    private long _historyWriteGeneration;
+    private DateTimeOffset _nextHistoryPrune;
     private string? _historyChatId;
 
     private void ApplyHistorySettings()
@@ -72,6 +74,7 @@ public partial class MainWindow
         }
 
         ClearHistoryButton.IsEnabled = false;
+        _historyWriteGeneration++;
         await _historyWrites.WaitAsync();
         try
         {
@@ -93,6 +96,7 @@ public partial class MainWindow
     private async Task RecordHistoryAsync(HudSnapshot snapshot)
     {
         var retention = _settings.HistoryRetention;
+        var generation = _historyWriteGeneration;
         if (_history is null || retention == MetricsHistoryRetention.Off)
         {
             return;
@@ -104,7 +108,7 @@ public partial class MainWindow
         await _historyWrites.WaitAsync();
         try
         {
-            if (retention == _settings.HistoryRetention && !_quitting)
+            if (retention == _settings.HistoryRetention && generation == _historyWriteGeneration && !_quitting)
             {
                 await Task.Run(() => _history.RecordAsync(samples, retention));
                 if (_snapshot?.RefreshedAt == snapshot.RefreshedAt)
@@ -116,6 +120,42 @@ public partial class MainWindow
         catch (Exception exception) when (IsHistoryFailure(exception))
         {
             ShowHistoryStatus("Metrics history could not be updated.");
+        }
+        finally
+        {
+            _historyWrites.Release();
+        }
+    }
+
+    private void PruneHistoryWhenDue(DateTimeOffset now)
+    {
+        if (_history is null || _quitting || now < _nextHistoryPrune)
+        {
+            return;
+        }
+
+        _nextHistoryPrune = now.AddMinutes(15);
+        _ = PruneHistoryAsync(_settings.HistoryRetention);
+    }
+
+    private async Task PruneHistoryAsync(MetricsHistoryRetention retention)
+    {
+        if (_history is null || retention is MetricsHistoryRetention.Off or MetricsHistoryRetention.Indefinite)
+        {
+            return;
+        }
+
+        await _historyWrites.WaitAsync();
+        try
+        {
+            if (retention == _settings.HistoryRetention && !_quitting)
+            {
+                await Task.Run(() => _history.ApplyRetentionAsync(retention));
+            }
+        }
+        catch (Exception exception) when (IsHistoryFailure(exception))
+        {
+            HistorySettingsStatusLabel.Text = "Could not apply the retention setting.";
         }
         finally
         {

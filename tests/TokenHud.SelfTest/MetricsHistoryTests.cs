@@ -38,12 +38,16 @@ internal static class MetricsHistoryTests
             Check((await store.ReadRecentAsync(id, MetricsHistoryRetention.Indefinite)).Count == 2,
                 "Applying shorter retention did not delete the expired sample.");
 
+            var future = Sample(now.AddSeconds(2), 100_000);
+            await store.RecordAsync([future, Sample(now.AddMinutes(2), 130_000)], MetricsHistoryRetention.Days30);
+            Check((await store.ReadRecentAsync(id, MetricsHistoryRetention.Days30)).Last().ContextLoad == 100_000,
+                "A sample too far ahead of the clock was retained.");
             await store.EraseAsync();
             var reopened = new MetricsHistoryStore(path, clock);
-            await reopened.RecordAsync([Sample(now.AddMinutes(-1), 120_000)], MetricsHistoryRetention.Days30);
+            await reopened.RecordAsync([Sample(now.AddMinutes(-1), 120_000), future], MetricsHistoryRetention.Days30);
             Check((await reopened.ReadRecentAsync(id, MetricsHistoryRetention.Days30)).Count == 0,
                 "A pre-clear sample reappeared after reopening.");
-            await reopened.RecordAsync([Sample(now.AddSeconds(1), 140_000, BudgetZone.Critical)], MetricsHistoryRetention.Days30);
+            await reopened.RecordAsync([Sample(now.AddSeconds(3), 140_000, BudgetZone.Critical)], MetricsHistoryRetention.Days30);
             Check((await reopened.ReadRecentAsync(id, MetricsHistoryRetention.Days30)).Single().Zone == BudgetZone.Critical,
                 "A new reading after erase was not recorded.");
         }

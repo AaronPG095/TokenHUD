@@ -45,7 +45,9 @@ public sealed class MetricsHistoryStore(string path, TimeProvider? timeProvider 
             return;
         }
 
+        var latestTimestamp = _time.GetUtcNow().AddMinutes(1);
         var valid = samples.Where(sample => !string.IsNullOrWhiteSpace(sample.ChatId) &&
+                sample.Point.ObservedAt <= latestTimestamp &&
                 sample.Point.ContextLoad >= 0 && sample.Point.EffectiveBudget > 0 &&
                 sample.Point.Zone is >= BudgetZone.Healthy and <= BudgetZone.OverBudget)
             .OrderBy(sample => sample.Point.ObservedAt).ToArray();
@@ -160,9 +162,11 @@ public sealed class MetricsHistoryStore(string path, TimeProvider? timeProvider 
             using var erase = connection.CreateCommand();
             erase.Transaction = transaction;
             erase.CommandText = """
-                DELETE FROM samples;
                 INSERT OR IGNORE INTO history_state (id, erased_at) VALUES (1, $now);
-                UPDATE history_state SET erased_at = MAX(erased_at, $now) WHERE id = 1;
+                UPDATE history_state
+                SET erased_at = MAX(erased_at, $now, COALESCE((SELECT MAX(observed_at) FROM samples), 0))
+                WHERE id = 1;
+                DELETE FROM samples;
                 """;
             erase.Parameters.AddWithValue("$now", _time.GetUtcNow().UtcTicks);
             erase.ExecuteNonQuery();

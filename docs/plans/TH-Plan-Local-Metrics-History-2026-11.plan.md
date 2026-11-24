@@ -8,6 +8,12 @@ devTicketKey: TH:TH-Plan-Local-Metrics-History-2026-11
 agent: Codex
 branch: codex/tokenhud-local-metrics-history
 worktree: TokenHUD
+reviewedBy: Codex
+reviewVerdict: pass
+reviewModel: gpt-6.2-sol
+reviewSession: /root/compact_reviewer
+baseBranch: main
+reviewFingerprint: 2b1b1887734ed960fb2cb6e4fe315b68fd6aca44f3e5b2060a62f14a83652dbc
 ---
 # Local Metrics History
 
@@ -52,3 +58,5 @@ Release packaging, cloud storage, provider expansion and transcript-derived anal
 Aaron approved the original scope on 2026-11-24 with “Agreed.” Local Metrics History and privacy are isolated from budget settings and alerts for independent review.
 
 ## Progress log
+- 2026-11-24 16:25 UTC, Codex (review: block): Clear could replay future-dated observations. Scheduled retention did not prune rows while monitoring was paused. (model: gpt-6.2-sol)
+- 2026-11-24 16:26 UTC, Codex (review: pass): Erasure cutoff and queued-write generation prevent replay. Retention prunes on startup and while monitoring is paused. Independent pack passed all 13 checks. [reviewer: /root/compact_reviewer] (model: gpt-6.2-sol)
