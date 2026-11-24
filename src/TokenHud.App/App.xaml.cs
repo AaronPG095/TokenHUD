@@ -11,23 +11,30 @@ public partial class App : System.Windows.Application
     protected override void OnStartup(StartupEventArgs e)
     {
         base.OnStartup(e);
-        _singleInstance = new SingleInstanceCoordinator();
-        if (!_singleInstance.IsPrimary)
+        var demo = e.Args.Contains("--demo", StringComparer.OrdinalIgnoreCase);
+        if (!demo)
         {
-            _singleInstance.SignalPrimary();
-            Shutdown();
-            return;
+            _singleInstance = new SingleInstanceCoordinator();
+            if (!_singleInstance.IsPrimary)
+            {
+                _singleInstance.SignalPrimary();
+                Shutdown();
+                return;
+            }
         }
 
         _theme = new ThemeService();
-        var appData = new AppDataPaths();
+        var appData = demo
+            ? new AppDataPaths(System.IO.Path.Combine(System.IO.Path.GetTempPath(), $"TokenHUD-demo-{Environment.ProcessId}"))
+            : new AppDataPaths();
         var settingsStore = new SettingsStore(appData);
-        var settings = settingsStore.LoadAsync().GetAwaiter().GetResult();
+        var settings = demo
+            ? new HudSettings { NotificationsEnabled = false, StartWithWindows = false }
+            : settingsStore.LoadAsync().GetAwaiter().GetResult();
         var diagnostics = new RollingDiagnostics(appData);
-        var demo = e.Args.Contains("--demo", StringComparer.OrdinalIgnoreCase);
         var window = new MainWindow(settings, settingsStore, diagnostics, _theme, demo);
         MainWindow = window;
-        _singleInstance.StartListening(() => Dispatcher.Invoke(window.ShowFromTray));
+        _singleInstance?.StartListening(() => Dispatcher.Invoke(window.ShowFromTray));
         window.Show();
     }
 
