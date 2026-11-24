@@ -63,6 +63,7 @@ public partial class MainWindow : Window
         _history = history;
         _budgetProfiles = CreateBudgetProfiles();
         InitializeComponent();
+        _theme.PaletteChanged += RefreshThemeColors;
 
         WindowChrome.SetWindowChrome(this, new WindowChrome
         {
@@ -83,7 +84,18 @@ public partial class MainWindow : Window
         _freshnessTimer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(5) };
         _freshnessTimer.Tick += (_, _) => UpdateMonitorStatus();
 
-        _settings.StartWithWindows = !_demo && StartupRegistration.IsEnabled();
+        if (!_demo)
+        {
+            if (StartupRegistration.TryGetEnabled(out var startsWithWindows))
+            {
+                _settings.StartWithWindows = startsWithWindows;
+            }
+            else
+            {
+                _ = _diagnostics.WriteAsync("startup_registration_failed", DiagnosticLevel.Warning);
+            }
+        }
+
         foreach (var (threadId, value) in _settings.AlertStates)
         {
             if (value is 1 or 2)
@@ -114,6 +126,7 @@ public partial class MainWindow : Window
         menu.Items.Add(new System.Windows.Forms.ToolStripSeparator());
         menu.Items.Add("Open diagnostics", null, (_, _) => Dispatcher.Invoke(OpenDiagnostics));
         menu.Items.Add("Copy diagnostic summary", null, (_, _) => Dispatcher.Invoke(CopyDiagnosticSummary));
+        menu.Items.Add("Export diagnostics…", null, async (_, _) => await Dispatcher.InvokeAsync(ExportDiagnosticsAsync).Task.Unwrap());
         menu.Items.Add(new System.Windows.Forms.ToolStripSeparator());
         menu.Items.Add("Quit", null, async (_, _) => await Dispatcher.InvokeAsync(QuitAsync));
 
@@ -151,6 +164,11 @@ public partial class MainWindow : Window
 
     public void ShowFromTray()
     {
+        if (_quitting)
+        {
+            return;
+        }
+
         if (!IsVisible)
         {
             Show();
@@ -189,7 +207,7 @@ public partial class MainWindow : Window
     private void Monitor_SnapshotChanged(object? sender, (MonitorOptions Options, HudSnapshot Snapshot) refresh) =>
         Dispatcher.BeginInvoke(() =>
         {
-            if (refresh.Options != GetMonitorOptions())
+            if (_quitting || refresh.Options != GetMonitorOptions())
             {
                 return;
             }
@@ -326,18 +344,20 @@ public partial class MainWindow : Window
         PruneHistoryWhenDue(DateTimeOffset.UtcNow);
         var snapshot = _snapshot;
         var paused = !_demo && _settings.MonitoringPaused;
+        var refreshFailed = !paused && _monitor?.RefreshFailed == true;
         // Allow three missed polling intervals before marking a running monitor stale.
         var stale = !_demo && snapshot is not null &&
-            (paused || DateTimeOffset.UtcNow - snapshot.RefreshedAt >= TimeSpan.FromSeconds(45));
-        MonitorStatusLabel.Text = stale ? "Stale" : paused ? "Paused" : string.Empty;
-        MonitorStatusLabel.Visibility = stale || paused ? Visibility.Visible : Visibility.Collapsed;
+            (paused || refreshFailed || DateTimeOffset.UtcNow - snapshot.RefreshedAt >= TimeSpan.FromSeconds(45));
+        MonitorStatusLabel.Text = stale ? "Stale" : paused ? "Paused" : refreshFailed ? "Refresh failed" : string.Empty;
+        MonitorStatusLabel.Visibility = stale || paused || refreshFailed ? Visibility.Visible : Visibility.Collapsed;
 
-        var status = stale ? (paused ? "Monitoring paused · Data stale" : "Data stale")
+        var status = refreshFailed ? (stale ? "Refresh failed · Data stale" : "Refresh failed")
+            : stale ? (paused ? "Monitoring paused · Data stale" : "Data stale")
             : paused ? "Monitoring paused"
             : snapshot?.SourceStatus ?? "Waiting for a local refresh";
         SourceHealthLabel.Text = $"Experimental Codex adapter · {status}";
         RefreshLabel.Text = snapshot is null ? "—" : $"Updated {snapshot.RefreshedAt:HH:mm:ss}";
-        HealthDot.Fill = FindBrush(stale || paused ? "CautionBrush" : snapshot?.StateDatabaseAvailable switch
+        HealthDot.Fill = FindBrush(stale || paused || refreshFailed ? "CautionBrush" : snapshot?.StateDatabaseAvailable switch
         {
             true => "HealthyBrush",
             false => "CautionBrush",
@@ -875,17 +895,15 @@ public partial class MainWindow : Window
 
     private void ToggleStartup()
     {
-        try
+        var enabled = !_settings.StartWithWindows;
+        if (StartupRegistration.TrySetEnabled(enabled))
         {
-            _settings.StartWithWindows = !_settings.StartWithWindows;
-            StartupRegistration.SetEnabled(_settings.StartWithWindows);
-            _startupMenu.Checked = _settings.StartWithWindows;
+            _settings.StartWithWindows = enabled;
+            _startupMenu.Checked = enabled;
             ScheduleSave();
         }
-        catch
+        else
         {
-            _settings.StartWithWindows = !_demo && StartupRegistration.IsEnabled();
-            _startupMenu.Checked = _settings.StartWithWindows;
             _ = _diagnostics.WriteAsync("startup_registration_failed", DiagnosticLevel.Warning);
         }
     }
@@ -1255,7 +1273,7 @@ public partial class MainWindow : Window
 
     private void ScheduleSave()
     {
-        if (_demo)
+        if (_demo || _quitting)
         {
             return;
         }
@@ -1267,6 +1285,11 @@ public partial class MainWindow : Window
     private async void SaveTimer_Tick(object? sender, EventArgs e)
     {
         _saveTimer.Stop();
+        await SaveSettingsAsync();
+    }
+
+    private async Task SaveSettingsAsync()
+    {
         try
         {
             await _settingsStore.SaveAsync(_settings);
@@ -1289,6 +1312,38 @@ public partial class MainWindow : Window
         System.Windows.Clipboard.SetText(_diagnostics.BuildSummary(_snapshot));
     }
 
+    private async Task ExportDiagnosticsAsync()
+    {
+        var report = _diagnostics.BuildSummary(_snapshot);
+        var dialog = new Microsoft.Win32.SaveFileDialog
+        {
+            Title = "Export Token HUD diagnostics",
+            FileName = $"TokenHUD-diagnostics-{DateTime.Now:yyyy-MM-dd}.txt",
+            Filter = "Text file (*.txt)|*.txt",
+            DefaultExt = ".txt",
+            AddExtension = true,
+        };
+
+        ShowFromTray();
+        var preview = System.Windows.MessageBox.Show(this,
+            $"{report}{Environment.NewLine}{Environment.NewLine}Save this diagnostic report?",
+            "Review diagnostic report", MessageBoxButton.YesNo, MessageBoxImage.Information, MessageBoxResult.No);
+        if (preview != MessageBoxResult.Yes || dialog.ShowDialog(this) != true)
+        {
+            return;
+        }
+
+        try
+        {
+            await File.WriteAllTextAsync(dialog.FileName, report);
+        }
+        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
+        {
+            System.Windows.MessageBox.Show(this, "Could not write the diagnostic report.",
+                "Token HUD diagnostics", MessageBoxButton.OK, MessageBoxImage.Warning);
+        }
+    }
+
     private async Task QuitAsync()
     {
         if (_quitting)
@@ -1297,21 +1352,30 @@ public partial class MainWindow : Window
         }
 
         _quitting = true;
+        _theme.PaletteChanged -= RefreshThemeColors;
+        _saveTimer.Stop();
+        _searchTimer.Stop();
         _freshnessTimer.Stop();
         _trayIcon.Visible = false;
         _notifications?.Dispose();
         _trayIcon.Dispose();
-        if (_monitor is not null)
+        try
         {
-            await _monitor.DisposeAsync();
-        }
+            if (_monitor is not null)
+            {
+                _monitor.SnapshotChanged -= Monitor_SnapshotChanged;
+                await _monitor.DisposeAsync();
+            }
 
-        if (!_demo)
+            if (!_demo)
+            {
+                await SaveSettingsAsync();
+            }
+        }
+        finally
         {
-            await _settingsStore.SaveAsync(_settings);
+            System.Windows.Application.Current.Shutdown();
         }
-
-        System.Windows.Application.Current.Shutdown();
     }
 
     private void Window_Closing(object? sender, CancelEventArgs e)
@@ -1363,6 +1427,25 @@ public partial class MainWindow : Window
         }
 
         return 0;
+    }
+
+    private void RefreshThemeColors()
+    {
+        var handle = new WindowInteropHelper(this).Handle;
+        if (handle != 0)
+        {
+            ApplyDarkWindowFrame(handle);
+        }
+
+        PrivacyButton.Foreground = FindBrush(_settings.PrivacyMode ? "PrimaryBrush" : "MutedBrush");
+        if (_snapshot is { } snapshot)
+        {
+            UpdateSnapshot(snapshot);
+        }
+        else
+        {
+            UpdateMonitorStatus();
+        }
     }
 
     private void ApplyDarkWindowFrame(nint handle)

@@ -35,7 +35,7 @@ public partial class App : System.Windows.Application
         var history = demo ? null : new MetricsHistoryStore(appData.MetricsHistory);
         var window = new MainWindow(settings, settingsStore, diagnostics, _theme, demo, history);
         MainWindow = window;
-        _singleInstance?.StartListening(() => Dispatcher.Invoke(window.ShowFromTray));
+        _singleInstance?.StartListening(() => Dispatcher.BeginInvoke(window.ShowFromTray));
         window.Show();
     }
 

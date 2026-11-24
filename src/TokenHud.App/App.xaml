@@ -104,7 +104,7 @@
                     <ControlTemplate TargetType="Button">
                         <Grid SnapsToDevicePixels="True">
                             <Border x:Name="Border" Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="{TemplateBinding BorderThickness}" CornerRadius="6" Padding="{TemplateBinding Padding}">
-                                <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" />
+                                <ContentPresenter RecognizesAccessKey="True" HorizontalAlignment="Center" VerticalAlignment="Center" />
                             </Border>
                             <Border x:Name="FocusRing" CornerRadius="6" BorderThickness="2"
                                     BorderBrush="{DynamicResource PrimaryBrush}" IsHitTestVisible="False" Visibility="Hidden" />

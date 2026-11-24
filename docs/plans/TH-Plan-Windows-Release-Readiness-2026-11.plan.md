@@ -1,11 +1,13 @@
 ---
 title: Plan - Feature: Windows Release Readiness
 ticket: https://app.notion.com/p/TH-Plan-Feature-Windows-Release-Readiness-4220b9c6786f817494cbfa733971e31b
-status: planned
+status: in-progress
 appetite: L
 impact: minor
 devTicketKey: TH:TH-Plan-Windows-Release-Readiness-2026-11
 agent: Codex
+branch: codex/tokenhud-windows-release
+worktree: TokenHUD
 ---
 # Windows Release Readiness
 
