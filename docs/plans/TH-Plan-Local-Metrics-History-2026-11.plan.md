@@ -1,7 +1,7 @@
 ---
 title: Plan - Feature: Local Metrics History
 ticket: https://app.notion.com/p/TH-Plan-Feature-Local-Metrics-History-4220b9c6786f81229ea9c86bb5040ef4
-status: in-progress
+status: shipped
 appetite: L
 impact: minor
 devTicketKey: TH:TH-Plan-Local-Metrics-History-2026-11
@@ -14,6 +14,7 @@ reviewModel: gpt-6.2-sol
 reviewSession: /root/compact_reviewer
 baseBranch: main
 reviewFingerprint: 2b1b1887734ed960fb2cb6e4fe315b68fd6aca44f3e5b2060a62f14a83652dbc
+pr: https://github.com/AaronPG095/TokenHUD/pull/16
 ---
 # Local Metrics History
 
