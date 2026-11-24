@@ -1,11 +1,13 @@
 ---
 title: Plan - Bug: Reliable Token HUD Readings
 ticket: https://app.notion.com/p/TH-Plan-Bug-Reliable-Token-HUD-Readings-4220b9c6786f816c921cce14bc620d61
-status: planned
+status: in-progress
 appetite: M
 impact: patch
 devTicketKey: TH:TH-Plan-Reliable-Token-HUD-Readings-2026-11
 agent: Codex
+branch: codex/tokenhud-reliable-readings
+worktree: TokenHUD
 ---
 # Reliable Token HUD Readings
 
@@ -26,7 +28,7 @@ None
 
 ## Acceptance criteria
 
-- [ ] AC1: Current indexed chat names survive out-of-order renames and malformed index entries, and missing names use a safe fallback without reading message content.
+- [x] AC1: Current indexed chat names survive out-of-order renames and malformed index entries, and missing names use a safe fallback without reading message content. verified: Self-test exercised both metadata paths, reordered and malformed names, and the neutral fallback.
 - [ ] AC2: Compact includes at most six unarchived top-level chats ordered by latest activity across each chat tree, including subagent activity.
 - [ ] AC3: Five-hour and weekly quotas are classified by their respective durations, independent of slot order. Missing, expired and unrelated windows remain unavailable.
 - [ ] AC4: An unavailable context measurement is shown as unavailable and stays distinguishable from a measured zero across Compact and Expanded. Stale monitoring data is identified.
@@ -53,3 +55,4 @@ Fluent Studio restyling, expanded layout changes, budget profiles, alert prefere
 Aaron approved the five-PR scope and layout direction on 2026-11-24 with “Agreed.”
 
 ## Progress log
+- 2026-11-24 10:54 UTC, Codex (handoff): Done: Created the approved plan and Notion Development ticket, implemented the reading reliability changes in the isolated worktree, and passed 9 of 9 tests before registering the final context fixture. Corrected evidence attached to the wrong items.; Next: Resume the evidence step with full checkbox text instead of changing indexes, build and test the final revision, then obtain independent review and ship PR 1.; Open: A batch reused changing open-item indexes and tick 7 failed. The remaining criteria are open. Final context fixture and exact final build are unverified. Implementation edits are preserved in the isolated worktree.; Tree: 13 dirty file(s)
