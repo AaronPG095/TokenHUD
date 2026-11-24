@@ -128,7 +128,7 @@ Avoid neon AI aesthetics, purple gradients, glass, finance-dashboard density, ga
 - Resolve Context Budget in this order: installation default, provider override, chat override, then model-limit safety cap.
 - Aaron's installation default is 150,000 tokens; product defaults remain configurable for other users.
 - Aaron's Budget Zone boundaries are 100,000 for Caution, 125,000 for Critical, and 150,000 for Over Budget.
-- Compact View shows only the resolved Budget Zone. Expanded tooltips and settings explain inheritance and overrides.
+- Compact shows the resolved Budget Zone and indicates when the six rows use different budgets. Expanded shows the effective budget and its source for the selected chat. Settings accept optional Codex and chat overrides and explain when the reported model limit caps the budget. The current cap is 95% of a valid reported model limit.
 
 ## Local data controls
 

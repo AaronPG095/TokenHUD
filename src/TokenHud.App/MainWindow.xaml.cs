@@ -27,7 +27,8 @@ public partial class MainWindow : Window
     private readonly DispatcherTimer _searchTimer;
     private readonly DispatcherTimer _saveTimer;
     private readonly DispatcherTimer _freshnessTimer;
-    private readonly Dictionary<string, AlertState> _alertStates = new(StringComparer.Ordinal);
+    private ContextBudgetProfiles _budgetProfiles;
+    private string? _budgetEditorChatId;
     private readonly ObservableCollection<RecentChatDisplayItem> _recentItems = [];
     private readonly ObservableCollection<ChatListItem> _chatItems = [];
     private readonly ObservableCollection<ThreadDisplayItem> _threadItems = [];
@@ -58,6 +59,7 @@ public partial class MainWindow : Window
         _diagnostics = diagnostics;
         _theme = theme;
         _demo = demo;
+        _budgetProfiles = CreateBudgetProfiles();
         InitializeComponent();
 
         WindowChrome.SetWindowChrome(this, new WindowChrome
@@ -82,12 +84,13 @@ public partial class MainWindow : Window
         _settings.StartWithWindows = !_demo && StartupRegistration.IsEnabled();
         foreach (var (threadId, value) in _settings.AlertStates)
         {
-            if (Enum.IsDefined(typeof(AlertState), value))
+            if (value is 1 or 2)
             {
-                _alertStates[threadId] = (AlertState)value;
+                _settings.BudgetAlertStates.TryAdd(threadId, new BudgetAlertState(value == 1 ? BudgetZone.Critical : BudgetZone.OverBudget));
             }
         }
 
+        _settings.AlertStates.Clear();
         NormalizeGeometrySettings();
         ApplySettingsToControls();
         ApplyViewMode();
@@ -175,7 +178,11 @@ public partial class MainWindow : Window
         _settings.ContextBudget,
         _settings.ShowArchived,
         _searchText,
-        _settings.MonitoringPaused);
+        _settings.MonitoringPaused,
+        _budgetProfiles);
+
+    private ContextBudgetProfiles CreateBudgetProfiles() =>
+        new(_settings.CodexContextBudget, new Dictionary<string, long>(_settings.ChatContextBudgets, StringComparer.Ordinal));
 
     private void Monitor_SnapshotChanged(object? sender, (MonitorOptions Options, HudSnapshot Snapshot) refresh) =>
         Dispatcher.BeginInvoke(() =>
@@ -200,7 +207,7 @@ public partial class MainWindow : Window
         var options = GetMonitorOptions();
         if (_demo)
         {
-            UpdateSnapshot(DemoData.Create(options.TrackedThreadId, options.IncludeArchived, options.Search));
+            UpdateSnapshot(DemoData.Create(options.TrackedThreadId, options.IncludeArchived, options.Search, options.Budget, options.Profiles));
             return;
         }
 
@@ -243,7 +250,7 @@ public partial class MainWindow : Window
             else
             {
                 TrackedTitle.Text = DisplayTitle(tracked.Root);
-                UpdateContextMeter(tracked.Analysis);
+                UpdateContextMeter(tracked.Analysis, tracked.Budget);
                 OriginStatusLabel.Text = tracked.Analysis.Zone == BudgetZone.Unavailable
                     ? "Context measurement unavailable"
                     : "Experimental Codex adapter · Context origin unavailable";
@@ -255,7 +262,10 @@ public partial class MainWindow : Window
             UpdateQuota(snapshot.Quota);
             UpdateRecentList(snapshot);
             UpdateChatList(snapshot);
-            CompactBudgetLabel.Text = $"CONTEXT LOAD / {FormatTokens(_settings.ContextBudget)}";
+            var budgets = snapshot.RecentChats.Select(chat => chat.Budget.EffectiveTokens).Distinct().Take(2).ToArray();
+            CompactBudgetLabel.Text = budgets.Length > 1 ? "CONTEXT LOAD / VARIES"
+                : $"CONTEXT LOAD / {FormatTokens(budgets.Length == 1 ? budgets[0] : _settings.ContextBudget)}";
+            RefreshBudgetSettings(tracked);
             UpdateMonitorStatus();
             CheckAlerts(snapshot);
         }
@@ -287,13 +297,14 @@ public partial class MainWindow : Window
         (id == pinned || (id is not null && id == tracked?.Root.Id &&
             tracked.Threads.Any(thread => thread.Thread.Id == pinned)));
 
-    private void UpdateContextMeter(ContextAnalysis? analysis)
+    private void UpdateContextMeter(ContextAnalysis? analysis, ResolvedContextBudget? budget = null)
     {
         var zone = analysis?.Zone ?? BudgetZone.Unavailable;
         var zoneBrush = FindBrush(ZoneBrushName(zone));
         ContextValue.Text = FormatContext(analysis);
         ContextValue.ToolTip = zone == BudgetZone.Unavailable ? null : $"{analysis!.Load:N0} context tokens";
-        BudgetValue.Text = $" / {FormatTokens(_settings.ContextBudget)}";
+        BudgetValue.Text = $" / {FormatTokens(budget?.EffectiveTokens ?? _settings.ContextBudget)}";
+        BudgetValue.ToolTip = budget is null ? null : DescribeBudget(budget);
         ContextMeter.Visibility = zone == BudgetZone.Unavailable ? Visibility.Hidden : Visibility.Visible;
         ContextMeter.Value = Math.Clamp(analysis?.BudgetPercent ?? 0, 0, 100);
         ContextMeter.Foreground = zoneBrush;
@@ -564,88 +575,81 @@ public partial class MainWindow : Window
 
     private void CheckAlerts(HudSnapshot snapshot)
     {
-        if (_demo || !_settings.NotificationsEnabled)
+        if (_demo || _settings.MonitoringPaused)
         {
             return;
         }
 
+        var changed = false;
         var candidates = snapshot.RecentChats
-                     .Where(chat => !chat.Root.Archived)
-                     .SelectMany(chat => chat.Threads)
-                     .Where(item => item.Depth == 0 || item.Thread.IsActivelyRunning(snapshot.RefreshedAt))
-                     .DistinctBy(item => item.Thread.Id)
-                     .ToArray();
-        var stateChanged = false;
-        var candidateIds = candidates.Select(item => item.Thread.Id).ToHashSet(StringComparer.Ordinal);
-        foreach (var threadId in _alertStates.Keys.Where(id => !candidateIds.Contains(id)).ToArray())
-        {
-            _alertStates.Remove(threadId);
-            _settings.AlertStates.Remove(threadId);
-            stateChanged = true;
-        }
-
+            .Where(chat => !chat.Root.Archived)
+            .SelectMany(chat => chat.Threads)
+            .Where(item => !item.Thread.Archived && (item.Depth == 0 || item.Thread.IsActivelyRunning(snapshot.RefreshedAt)))
+            .DistinctBy(item => item.Thread.Id);
         foreach (var item in candidates)
         {
-            if (item.Thread.Archived || item.Analysis.Zone == BudgetZone.Unavailable)
+            var id = item.Thread.Id;
+            var known = _settings.BudgetAlertStates.TryGetValue(id, out var previous);
+            previous ??= new BudgetAlertState();
+            var suppress = !_settings.NotificationsEnabled || (!_alertsInitialized && !known && id != snapshot.Tracked?.Root.Id);
+            var result = BudgetAlerts.Evaluate(previous, item.Analysis.Zone, _settings.AlertPreferences,
+                snapshot.RefreshedAt, _settings.AlertsSnoozedUntil, suppress);
+            if (result.State != previous)
             {
-                continue;
+                _settings.BudgetAlertStates[id] = result.State;
+                changed = true;
             }
 
-            if (item.Analysis.BudgetPercent < 75)
+            if (result.NotificationZone is { } zone)
             {
-                if (_alertStates.Remove(item.Thread.Id))
-                {
-                    _settings.AlertStates.Remove(item.Thread.Id);
-                    stateChanged = true;
-                }
-
-                continue;
-            }
-
-            _alertStates.TryGetValue(item.Thread.Id, out var current);
-            var initialObservation = !_alertsInitialized && current == AlertState.None;
-            if (item.Analysis.Zone == BudgetZone.OverBudget && current < AlertState.OverBudget)
-            {
-                if (!initialObservation || item.Thread.Id == snapshot.Tracked?.Root.Id)
-                {
-                    ShowAlert(item, overBudget: true);
-                }
-
-                _alertStates[item.Thread.Id] = AlertState.OverBudget;
-                _settings.AlertStates[item.Thread.Id] = (int)AlertState.OverBudget;
-                stateChanged = true;
-            }
-            else if (item.Analysis.Zone == BudgetZone.Critical && current < AlertState.Critical)
-            {
-                if (!initialObservation || item.Thread.Id == snapshot.Tracked?.Root.Id)
-                {
-                    ShowAlert(item, overBudget: false);
-                }
-
-                _alertStates[item.Thread.Id] = AlertState.Critical;
-                _settings.AlertStates[item.Thread.Id] = (int)AlertState.Critical;
-                stateChanged = true;
+                ShowAlert(item, zone);
             }
         }
 
         _alertsInitialized = true;
-        if (stateChanged)
+        if (changed)
         {
             ScheduleSave();
         }
     }
 
-    private void ShowAlert(ThreadBreakdown item, bool overBudget)
+    private void ShowAlert(ThreadBreakdown item, BudgetZone zone)
     {
         var chatName = _settings.PrivacyMode ? (item.Thread.IsSubagent ? "A subagent" : "A Codex chat") : DisplayTitle(item.Thread);
-        var title = overBudget ? "Token HUD · Context budget reached" : "Token HUD · Critical context";
-        var message = $"{chatName} is at {FormatTokens(item.Analysis.Load)} of {FormatTokens(_settings.ContextBudget)}. Open Token HUD to review it.";
+        var title = $"Token HUD · {ZoneName(zone)} context";
+        var message = $"{chatName} is at {FormatTokens(item.Analysis.Load)} of {FormatTokens(item.Budget.EffectiveTokens)}. Open Token HUD to review it.";
         if (_notifications?.TryShow(title, message, item.Thread.Id) != true)
         {
             _trayIcon.ShowBalloonTip(7_000, title, message, System.Windows.Forms.ToolTipIcon.Warning);
         }
     }
 
+    private void ZonePreferenceChanged(object sender, RoutedEventArgs e)
+    {
+        if (_updatingUi || NotifyOverBudgetCheckBox is null)
+        {
+            return;
+        }
+
+        _settings.AlertPreferences = new BudgetAlertPreferences(
+            NotifyCautionCheckBox.IsChecked == true, NotifyCriticalCheckBox.IsChecked == true, NotifyOverBudgetCheckBox.IsChecked == true);
+        ScheduleSave();
+    }
+
+    private void SnoozeAlertsButton_Click(object sender, RoutedEventArgs e)
+    {
+        var now = DateTimeOffset.UtcNow;
+        _settings.AlertsSnoozedUntil = _settings.AlertsSnoozedUntil > now ? null : now.AddHours(1);
+        UpdateAlertControls();
+        ScheduleSave();
+    }
+
+    private void UpdateAlertControls()
+    {
+        AlertPreferencesPanel.IsEnabled = _settings.NotificationsEnabled;
+        var until = _settings.AlertsSnoozedUntil;
+        SnoozeAlertsButton.Content = until > DateTimeOffset.UtcNow ? $"Resume alerts ({until.Value.LocalDateTime:t})" : "Snooze for 1 hour";
+    }
     private void ApplySettingsToControls()
     {
         _updatingUi = true;
@@ -655,7 +659,11 @@ public partial class MainWindow : Window
             TopmostCheckBox.IsChecked = _settings.AlwaysOnTop;
             NotifyCheckBox.IsChecked = _settings.NotificationsEnabled;
             ArchivedCheckBox.IsChecked = _settings.ShowArchived;
-            BudgetBox.Text = _settings.ContextBudget.ToString("N0", CultureInfo.CurrentCulture);
+            NotifyCautionCheckBox.IsChecked = _settings.AlertPreferences.Caution;
+            NotifyCriticalCheckBox.IsChecked = _settings.AlertPreferences.Critical;
+            NotifyOverBudgetCheckBox.IsChecked = _settings.AlertPreferences.OverBudget;
+            UpdateAlertControls();
+            RefreshBudgetSettings(_snapshot?.Tracked);
             PauseButton.Content = _settings.MonitoringPaused ? "Resume monitoring" : "Pause monitoring";
             PrivacyButton.Foreground = FindBrush(_settings.PrivacyMode ? "PrimaryBrush" : "MutedBrush");
             PrivacyButton.ToolTip = _settings.PrivacyMode ? "Show chat names" : "Hide chat names";
@@ -921,6 +929,7 @@ public partial class MainWindow : Window
         }
 
         _settings.NotificationsEnabled = NotifyCheckBox.IsChecked == true;
+        UpdateAlertControls();
         ScheduleSave();
     }
 
@@ -1018,38 +1027,129 @@ public partial class MainWindow : Window
 
     private void BudgetBox_KeyDown(object sender, System.Windows.Input.KeyEventArgs e)
     {
-        if (e.Key == Key.Enter)
+        if (e.Key == Key.Enter && sender is System.Windows.Controls.TextBox box)
         {
-            ApplyBudgetText();
-            Keyboard.ClearFocus();
+            e.Handled = true;
+            ApplyBudgetText(box);
         }
     }
 
-    private void BudgetBox_LostFocus(object sender, RoutedEventArgs e) => ApplyBudgetText();
-
-    private void ApplyBudgetText()
+    private void BudgetBox_LostFocus(object sender, RoutedEventArgs e)
     {
-        var text = BudgetBox.Text.Trim().Replace(",", string.Empty, StringComparison.Ordinal).Replace(" ", string.Empty, StringComparison.Ordinal);
-        long multiplier = 1;
-        if (text.EndsWith("k", StringComparison.OrdinalIgnoreCase))
+        if (sender is System.Windows.Controls.TextBox box)
         {
-            multiplier = 1_000;
+            ApplyBudgetText(box);
+        }
+    }
+
+    private void RefreshBudgetSettings(ChatUsage? tracked)
+    {
+        if (!BudgetBox.IsKeyboardFocusWithin)
+        {
+            BudgetBox.Text = FormatBudgetEntry(_settings.ContextBudget);
+        }
+        if (!ProviderBudgetBox.IsKeyboardFocusWithin)
+        {
+            ProviderBudgetBox.Text = FormatBudgetEntry(_settings.CodexContextBudget);
+        }
+        if (!ChatBudgetBox.IsKeyboardFocusWithin)
+        {
+            _budgetEditorChatId = tracked?.Root.Id;
+            ChatBudgetBox.IsEnabled = _budgetEditorChatId is not null;
+            ChatBudgetBox.Text = _budgetEditorChatId is { } id && _settings.ChatContextBudgets.TryGetValue(id, out var chat)
+                ? FormatBudgetEntry(chat) : string.Empty;
+        }
+
+        var budget = tracked?.Budget;
+        BudgetSourceLabel.Text = budget is null ? "Select a chat to see its resolved budget." : DescribeBudget(budget);
+    }
+
+    private static string FormatBudgetEntry(long? budget) =>
+        budget?.ToString("N0", CultureInfo.CurrentCulture) ?? string.Empty;
+
+    private static string DescribeBudget(ResolvedContextBudget budget)
+    {
+        var source = budget.Source switch
+        {
+            ContextBudgetSource.Chat => "Chat override",
+            ContextBudgetSource.Codex => "Codex override",
+            _ => "Installation default",
+        };
+        return budget.IsCapped
+            ? $"{source} · {budget.EffectiveTokens:N0} tokens after the model safety cap"
+            : $"{source} · {budget.EffectiveTokens:N0} tokens";
+    }
+
+    private void ApplyBudgetText(System.Windows.Controls.TextBox box)
+    {
+        if (_updatingUi)
+        {
+            return;
+        }
+
+        var text = box.Text.Trim().Replace(" ", string.Empty, StringComparison.Ordinal);
+        var culture = CultureInfo.CurrentCulture;
+        var hasSuffix = text.EndsWith("k", StringComparison.OrdinalIgnoreCase);
+        if (hasSuffix)
+        {
             text = text[..^1];
         }
 
-        if (double.TryParse(text, NumberStyles.Float, CultureInfo.CurrentCulture, out var parsed))
+        long? value = null;
+        if (!string.IsNullOrEmpty(text) && double.TryParse(text, NumberStyles.Float | NumberStyles.AllowThousands, culture, out var parsed) &&
+            double.IsFinite(parsed) && parsed > 0)
         {
-            _settings.ContextBudget = Math.Clamp((long)Math.Round(parsed * multiplier), 10_000, 1_000_000);
-            BudgetBox.Text = _settings.ContextBudget.ToString("N0", CultureInfo.CurrentCulture);
-            _monitor?.RequestRefresh();
-            ScheduleSave();
+            value = (long)Math.Clamp(Math.Round(parsed * (hasSuffix ? 1_000 : 1)), 10_000, 1_000_000);
+        }
+        else if (!string.IsNullOrWhiteSpace(box.Text) || box == BudgetBox)
+        {
+            ResetBudgetBox(box);
+            return;
+        }
+
+        bool changed;
+        if (box == BudgetBox)
+        {
+            changed = _settings.ContextBudget != value!.Value;
+            _settings.ContextBudget = value.Value;
+        }
+        else if (box == ProviderBudgetBox)
+        {
+            changed = _settings.CodexContextBudget != value;
+            _settings.CodexContextBudget = value;
+        }
+        else if (_budgetEditorChatId is { } chatId)
+        {
+            if (value is { } chatBudget)
+            {
+                changed = !_settings.ChatContextBudgets.TryGetValue(chatId, out var current) || current != chatBudget;
+                _settings.ChatContextBudgets[chatId] = chatBudget;
+            }
+            else
+            {
+                changed = _settings.ChatContextBudgets.Remove(chatId);
+            }
         }
         else
         {
-            BudgetBox.Text = _settings.ContextBudget.ToString("N0", CultureInfo.CurrentCulture);
+            return;
+        }
+
+        box.Text = FormatBudgetEntry(value);
+        if (changed)
+        {
+            _budgetProfiles = CreateBudgetProfiles();
+            RefreshNavigation();
+            ScheduleSave();
         }
     }
 
+    private void ResetBudgetBox(System.Windows.Controls.TextBox box)
+    {
+        var value = box == BudgetBox ? _settings.ContextBudget : box == ProviderBudgetBox ? _settings.CodexContextBudget
+            : _budgetEditorChatId is { } id && _settings.ChatContextBudgets.TryGetValue(id, out var chat) ? chat : null;
+        box.Text = FormatBudgetEntry(value);
+    }
     private void TitleStrip_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
     {
         if (OriginatesFromButton(e.OriginalSource as DependencyObject))
@@ -1349,10 +1449,5 @@ public partial class MainWindow : Window
     [return: MarshalAs(UnmanagedType.Bool)]
     private static extern bool SetWindowPos(nint window, nint insertAfter, int x, int y, int width, int height, uint flags);
 
-    private enum AlertState
-    {
-        None,
-        Critical,
-        OverBudget,
-    }
+
 }

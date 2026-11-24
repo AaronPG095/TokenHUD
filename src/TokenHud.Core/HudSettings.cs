@@ -5,11 +5,16 @@ namespace TokenHud.Core;
 public sealed class HudSettings
 {
     public long ContextBudget { get; set; } = 150_000;
+    public long? CodexContextBudget { get; set; }
+    public Dictionary<string, long> ChatContextBudgets { get; set; } = new(StringComparer.Ordinal);
     public string? PinnedThreadId { get; set; }
     public bool PrivacyMode { get; set; }
     public bool AlwaysOnTop { get; set; } = true;
     public bool Expanded { get; set; }
     public bool NotificationsEnabled { get; set; } = true;
+    public BudgetAlertPreferences AlertPreferences { get; set; } = new();
+    public DateTimeOffset? AlertsSnoozedUntil { get; set; }
+    public Dictionary<string, BudgetAlertState> BudgetAlertStates { get; set; } = new(StringComparer.Ordinal);
     public bool MonitoringPaused { get; set; }
     public bool ShowArchived { get; set; }
     public bool StartWithWindows { get; set; } = true;

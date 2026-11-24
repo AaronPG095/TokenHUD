@@ -16,8 +16,10 @@ public sealed class SnapshotBuilder
         BudgetPolicy policy,
         bool includeArchived,
         string? search,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken = default,
+        ContextBudgetProfiles? profiles = null)
     {
+        profiles ??= new ContextBudgetProfiles();
         var catalog = await _catalog.LoadAsync(cancellationToken).ConfigureAwait(false);
         var byId = catalog.Threads.ToDictionary(item => item.Id, StringComparer.Ordinal);
         var children = catalog.Threads
@@ -41,7 +43,7 @@ public sealed class SnapshotBuilder
         var observedAt = DateTimeOffset.UtcNow;
         var usageTasks = recentRoots
             .DistinctBy(item => item.Id)
-            .Select(root => BuildChatUsageAsync(root, children, policy, observedAt, cancellationToken))
+            .Select(root => BuildChatUsageAsync(root, children, policy, profiles, observedAt, cancellationToken))
             .ToArray();
         var sampled = await Task.WhenAll(usageTasks).ConfigureAwait(false);
         var recent = sampled.Select(item => item.Chat).ToArray();
@@ -50,7 +52,7 @@ public sealed class SnapshotBuilder
         if (trackedRoot is not null)
         {
             tracked = recent.FirstOrDefault(item => item.Root.Id == trackedRoot.Id)
-                ?? (await BuildChatUsageAsync(trackedRoot, children, policy, observedAt, cancellationToken).ConfigureAwait(false)).Chat;
+                ?? (await BuildChatUsageAsync(trackedRoot, children, policy, profiles, observedAt, cancellationToken).ConfigureAwait(false)).Chat;
         }
 
         var normalizedSearch = search?.Trim();
@@ -82,6 +84,7 @@ public sealed class SnapshotBuilder
         ThreadRecord root,
         IReadOnlyDictionary<string, ThreadRecord[]> children,
         BudgetPolicy policy,
+        ContextBudgetProfiles profiles,
         DateTimeOffset observedAt,
         CancellationToken cancellationToken)
     {
@@ -94,7 +97,15 @@ public sealed class SnapshotBuilder
         var breakdown = histories.Select(item =>
         {
             var latest = item.History.LastOrDefault();
-            return new ThreadBreakdown(item.Thread, latest, BudgetAnalyzer.Analyze(item.History, policy), item.Depth);
+            var modelLimit = item.History
+                .OrderBy(sample => sample.Timestamp)
+                .LastOrDefault(sample => sample.ModelContextWindow >= 2)?.ModelContextWindow;
+            var budget = profiles.Resolve(policy.Budget, root.Id, modelLimit);
+            var effectivePolicy = policy with { Budget = budget.EffectiveTokens };
+            return new ThreadBreakdown(item.Thread, latest, BudgetAnalyzer.Analyze(item.History, effectivePolicy), item.Depth)
+            {
+                Budget = budget,
+            };
         }).ToArray();
 
         var rootBreakdown = breakdown[0];
@@ -118,7 +129,10 @@ public sealed class SnapshotBuilder
             treeConsumption,
             breakdown,
             highestChild,
-            lastActivity);
+            lastActivity)
+        {
+            Budget = rootBreakdown.Budget,
+        };
         var quotaObservations = histories.SelectMany(item => item.History)
             .Where(item => item.Quota is not null)
             .ToArray();

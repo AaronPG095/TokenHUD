@@ -8,7 +8,8 @@ internal sealed record MonitorOptions(
     long Budget,
     bool IncludeArchived,
     string Search,
-    bool Paused);
+    bool Paused,
+    ContextBudgetProfiles Profiles);
 
 internal sealed class HudMonitor : IAsyncDisposable
 {
@@ -112,7 +113,8 @@ internal sealed class HudMonitor : IAsyncDisposable
                         new BudgetPolicy(budget),
                         options.IncludeArchived,
                         options.Search,
-                        cancellationToken).ConfigureAwait(false);
+                        cancellationToken,
+                        profiles: options.Profiles).ConfigureAwait(false);
                     _lastRefreshAt = DateTimeOffset.UtcNow;
                     SnapshotChanged?.Invoke(this, (options, snapshot));
                     if (_lastRefreshAt - _lastHealthLogAt >= TimeSpan.FromMinutes(5))

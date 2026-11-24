@@ -1,11 +1,13 @@
 ---
 title: Plan - Feature: Context Budgets and Alerts
 ticket: https://app.notion.com/p/TH-Plan-Feature-Context-Budgets-and-Alerts-4220b9c6786f81dba9dae426ad3cb8a4
-status: planned
+status: in-progress
 appetite: L
 impact: minor
 devTicketKey: TH:TH-Plan-Context-Budgets-and-Alerts-2026-11
 agent: Codex
+branch: codex/tokenhud-context-budgets-alerts
+worktree: TokenHUD
 ---
 # Context Budgets and Alerts
 

@@ -380,29 +380,59 @@
                 <Border x:Name="SettingsSurface" Background="{DynamicResource CanvasBrush}" BorderBrush="{DynamicResource SurfaceStrongBrush}" BorderThickness="1"
                         CornerRadius="8" Padding="12" MinWidth="250" Margin="0,6,0,0" PreviewKeyDown="SettingsSurface_PreviewKeyDown"
                         KeyboardNavigation.TabNavigation="Cycle">
-                    <StackPanel>
+                    <ScrollViewer MaxHeight="430" VerticalScrollBarVisibility="Auto">
+                    <StackPanel Width="276">
                         <DockPanel LastChildFill="True">
                             <Button x:Name="CloseSettingsButton" DockPanel.Dock="Right" Content="Close" Style="{StaticResource QuietButton}"
                                     Click="CloseSettingsButton_Click" automation:AutomationProperties.Name="Close settings" />
                             <TextBlock Text="Settings" FontSize="13" FontWeight="SemiBold" VerticalAlignment="Center" />
                         </DockPanel>
-                        <Grid Margin="0,10,0,0">
+                        <TextBlock Text="Context budgets" FontSize="12" FontWeight="SemiBold" Margin="0,10,0,4" />
+                        <Grid>
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition Width="*" />
-                                <ColumnDefinition Width="90" />
+                                <ColumnDefinition Width="100" />
                             </Grid.ColumnDefinitions>
-                            <Label x:Name="BudgetLabel" Content="Context _budget" Target="{Binding ElementName=BudgetBox}"
-                                   VerticalAlignment="Center" FontSize="12" Padding="0" />
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="Auto" />
+                            </Grid.RowDefinitions>
+                            <Label Content="_Installation default" Target="{Binding ElementName=BudgetBox}" Padding="0"
+                                   VerticalAlignment="Center" FontSize="12" />
                             <TextBox x:Name="BudgetBox" Grid.Column="1" LostFocus="BudgetBox_LostFocus" KeyDown="BudgetBox_KeyDown"
-                                     ToolTip="Context budget in tokens" automation:AutomationProperties.Name="Context budget in tokens" />
+                                     automation:AutomationProperties.Name="Installation context budget in tokens" />
+                            <Label Content="_Codex override" Target="{Binding ElementName=ProviderBudgetBox}" Padding="0"
+                                   Grid.Row="1" VerticalAlignment="Center" FontSize="12" />
+                            <TextBox x:Name="ProviderBudgetBox" Grid.Row="1" Grid.Column="1" Margin="0,5,0,0"
+                                     LostFocus="BudgetBox_LostFocus" KeyDown="BudgetBox_KeyDown"
+                                     automation:AutomationProperties.Name="Codex context budget override in tokens" />
+                            <Label Content="Selected c_hat" Target="{Binding ElementName=ChatBudgetBox}" Padding="0"
+                                   Grid.Row="2" VerticalAlignment="Center" FontSize="12" />
+                            <TextBox x:Name="ChatBudgetBox" Grid.Row="2" Grid.Column="1" Margin="0,5,0,0"
+                                     LostFocus="BudgetBox_LostFocus" KeyDown="BudgetBox_KeyDown"
+                                     automation:AutomationProperties.Name="Selected chat context budget override in tokens" />
                         </Grid>
+                        <TextBlock Text="Leave overrides blank to inherit." Style="{StaticResource MutedText}" Margin="0,4,0,0" />
+                        <TextBlock x:Name="BudgetSourceLabel" Style="{StaticResource MutedText}" Margin="0,6,0,0" TextWrapping="Wrap" />
                         <CheckBox x:Name="TopmostCheckBox" Content="Always on top" Margin="0,10,0,0"
                                   Checked="TopmostCheckBox_Changed" Unchecked="TopmostCheckBox_Changed" />
                         <CheckBox x:Name="NotifyCheckBox" Content="Notifications" Margin="0,8,0,0"
                                   Checked="NotifyCheckBox_Changed" Unchecked="NotifyCheckBox_Changed" />
+                        <StackPanel x:Name="AlertPreferencesPanel" Margin="14,0,0,0">
+                            <CheckBox x:Name="NotifyCautionCheckBox" Content="Caution" Margin="0,4,0,0"
+                                      Checked="ZonePreferenceChanged" Unchecked="ZonePreferenceChanged" />
+                            <CheckBox x:Name="NotifyCriticalCheckBox" Content="Critical" Margin="0,4,0,0"
+                                      Checked="ZonePreferenceChanged" Unchecked="ZonePreferenceChanged" />
+                            <CheckBox x:Name="NotifyOverBudgetCheckBox" Content="Over budget" Margin="0,4,0,0"
+                                      Checked="ZonePreferenceChanged" Unchecked="ZonePreferenceChanged" />
+                            <Button x:Name="SnoozeAlertsButton" Content="Snooze for 1 hour" Style="{StaticResource QuietButton}"
+                                    Margin="0,8,0,0" HorizontalAlignment="Left" Click="SnoozeAlertsButton_Click" />
+                        </StackPanel>
                         <Button x:Name="PauseButton" Content="Pause monitoring" Style="{StaticResource QuietButton}"
                                 Margin="0,12,0,0" HorizontalAlignment="Left" Click="PauseButton_Click" />
                     </StackPanel>
+                    </ScrollViewer>
                 </Border>
             </Popup>
         </Grid>

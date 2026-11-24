@@ -4,6 +4,8 @@ var tests = new List<(string Name, Func<Task> Run)>
 {
     ("parses token events", ParseTokenEventAsync),
     ("enforces budget boundaries", BudgetBoundariesAsync),
+    ("resolves inherited budgets against current model limits", ContextBudgetTests.ResolvesHierarchyAndReportedLimitsAsync),
+    ("deduplicates zone alerts and respects cooldown and snooze", BudgetAlertTests.RunAsync),
     ("detects velocity and spikes", VelocityAndSpikeAsync),
     ("resolves current indexed chat names safely", CatalogFixtures.ResolveCurrentNamesAsync),
     ("orders the six recent chats by tree activity", SnapshotTests.KeepsSixRecentTopLevelChatsAsync),
