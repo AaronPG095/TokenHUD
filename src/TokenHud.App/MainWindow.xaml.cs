@@ -318,6 +318,7 @@ public partial class MainWindow : Window
 
     private void UpdateMonitorStatus()
     {
+        UpdateAlertControls();
         var snapshot = _snapshot;
         var paused = !_demo && _settings.MonitoringPaused;
         // Allow three missed polling intervals before marking a running monitor stale.
@@ -987,8 +988,11 @@ public partial class MainWindow : Window
 
     private void CloseSettingsButton_Click(object sender, RoutedEventArgs e) => SettingsPopup.IsOpen = false;
 
-    private void SettingsPopup_Opened(object? sender, EventArgs e) =>
+    private void SettingsPopup_Opened(object? sender, EventArgs e)
+    {
+        UpdateAlertControls();
         _ = Dispatcher.InvokeAsync(() => BudgetBox.Focus(), DispatcherPriority.Input);
+    }
 
     private void SettingsPopup_Closed(object? sender, EventArgs e)
     {
