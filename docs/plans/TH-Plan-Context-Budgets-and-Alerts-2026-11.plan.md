@@ -1,7 +1,7 @@
 ---
 title: Plan - Feature: Context Budgets and Alerts
 ticket: https://app.notion.com/p/TH-Plan-Feature-Context-Budgets-and-Alerts-4220b9c6786f81dba9dae426ad3cb8a4
-status: in-progress
+status: shipped
 appetite: L
 impact: minor
 devTicketKey: TH:TH-Plan-Context-Budgets-and-Alerts-2026-11
@@ -14,6 +14,7 @@ reviewModel: gpt-6.2-sol
 reviewSession: /root/compact_reviewer
 baseBranch: main
 reviewFingerprint: 5f51eecc37da07e7bbf379074a30aada3a8ede5b8db29d75448b151ccddb2593
+pr: https://github.com/AaronPG095/TokenHUD/pull/15
 ---
 # Context Budgets and Alerts
 
