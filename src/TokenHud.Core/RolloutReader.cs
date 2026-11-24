@@ -49,13 +49,15 @@ public sealed class RolloutReader
                 continue;
             }
 
-            if (snapshot.SessionTotal.TotalTokens == 0 && snapshot.Context.TotalTokens == 0 && previous is not null)
+            if (!snapshot.HasSessionTotal && !snapshot.HasContext && snapshot.ModelContextWindow is null && previous is not null)
             {
                 snapshot = snapshot with
                 {
                     SessionTotal = previous.SessionTotal,
                     Context = previous.Context,
                     ModelContextWindow = previous.ModelContextWindow,
+                    HasContext = previous.HasContext,
+                    HasSessionTotal = previous.HasSessionTotal,
                 };
             }
 
@@ -77,12 +79,14 @@ public sealed class RolloutReader
         {
             using var document = JsonDocument.Parse(jsonLine);
             var root = document.RootElement;
-            if (!TryGetString(root, "type", out var eventType) || eventType != "event_msg")
+            if (root.ValueKind != JsonValueKind.Object ||
+                !TryGetString(root, "type", out var eventType) || eventType != "event_msg")
             {
                 return null;
             }
 
             if (!root.TryGetProperty("payload", out var payload) ||
+                payload.ValueKind != JsonValueKind.Object ||
                 !TryGetString(payload, "type", out var payloadType) ||
                 payloadType != "token_count")
             {
@@ -90,8 +94,8 @@ public sealed class RolloutReader
             }
 
             var timestamp = TryGetTimestamp(root, "timestamp") ?? DateTimeOffset.UtcNow;
-            var total = TokenBreakdown.Empty;
-            var context = TokenBreakdown.Empty;
+            TokenBreakdown? total = null;
+            TokenBreakdown? context = null;
             long? window = null;
 
             if (payload.TryGetProperty("info", out var info) && info.ValueKind == JsonValueKind.Object)
@@ -106,7 +110,7 @@ public sealed class RolloutReader
                     context = ParseBreakdown(contextElement);
                 }
 
-                if (info.TryGetProperty("model_context_window", out var windowElement) && windowElement.TryGetInt64(out var parsedWindow))
+                if (info.TryGetProperty("model_context_window", out var windowElement) && windowElement.ValueKind == JsonValueKind.Number && windowElement.TryGetInt64(out var parsedWindow))
                 {
                     window = parsedWindow;
                 }
@@ -116,12 +120,19 @@ public sealed class RolloutReader
                 ? ParseQuota(limits)
                 : null;
 
-            if (total.TotalTokens == 0 && context.TotalTokens == 0 && quota is null)
+            if (total is null && context is null && window is null && quota is null)
             {
                 return null;
             }
 
-            return new UsageSnapshot(timestamp, total, context, window, quota);
+            return new UsageSnapshot(
+                timestamp,
+                total ?? TokenBreakdown.Empty,
+                context ?? TokenBreakdown.Empty,
+                window,
+                quota,
+                HasContext: context is not null,
+                HasSessionTotal: total is not null);
         }
         catch (JsonException)
         {
@@ -129,13 +140,25 @@ public sealed class RolloutReader
         }
     }
 
-    private static TokenBreakdown ParseBreakdown(JsonElement element) => new(
-        GetInt64(element, "input_tokens"),
-        GetInt64(element, "cached_input_tokens"),
-        GetInt64(element, "cache_write_input_tokens"),
-        GetInt64(element, "output_tokens"),
-        GetInt64(element, "reasoning_output_tokens"),
-        GetInt64(element, "total_tokens"));
+    private static TokenBreakdown? ParseBreakdown(JsonElement element)
+    {
+        if (element.ValueKind != JsonValueKind.Object ||
+            !element.TryGetProperty("total_tokens", out var total) ||
+            total.ValueKind != JsonValueKind.Number ||
+            !total.TryGetInt64(out var totalTokens) ||
+            totalTokens < 0)
+        {
+            return null;
+        }
+
+        return new TokenBreakdown(
+            GetInt64(element, "input_tokens"),
+            GetInt64(element, "cached_input_tokens"),
+            GetInt64(element, "cache_write_input_tokens"),
+            GetInt64(element, "output_tokens"),
+            GetInt64(element, "reasoning_output_tokens"),
+            totalTokens);
+    }
 
     private static AccountQuota ParseQuota(JsonElement limits)
     {
@@ -186,7 +209,8 @@ public sealed class RolloutReader
     }
 
     private static long GetInt64(JsonElement element, string name) =>
-        element.TryGetProperty(name, out var value) && value.TryGetInt64(out var parsed) ? parsed : 0;
+        element.TryGetProperty(name, out var value) && value.ValueKind == JsonValueKind.Number &&
+        value.TryGetInt64(out var parsed) && parsed >= 0 ? parsed : 0;
 
     private static string? GetString(JsonElement element, string name) =>
         element.TryGetProperty(name, out var value) && value.ValueKind == JsonValueKind.String ? value.GetString() : null;

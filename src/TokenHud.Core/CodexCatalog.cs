@@ -87,9 +87,9 @@ public sealed class CodexCatalog
         var threads = new List<ThreadRecord>();
         await using (var command = connection.CreateCommand())
         {
-            // Intentionally select metadata only. Message and preview columns are never queried.
+            // Select metadata only. The legacy title can contain the first user message.
             command.CommandText = """
-                SELECT id, rollout_path, created_at, updated_at, cwd, title, tokens_used, archived,
+                SELECT id, rollout_path, created_at, updated_at, cwd, tokens_used, archived,
                        model, reasoning_effort, agent_nickname, agent_role, created_at_ms, updated_at_ms,
                        recency_at, recency_at_ms
                 FROM threads
@@ -100,21 +100,20 @@ public sealed class CodexCatalog
             {
                 var id = reader.GetString(0);
                 parents.TryGetValue(id, out var edge);
-                index.TryGetValue(id, out var indexed);
-                var chatName = string.IsNullOrWhiteSpace(indexed.Title) ? reader.GetString(5) : indexed.Title;
+                var chatName = index.TryGetValue(id, out var indexed) ? indexed.Title : string.Empty;
                 threads.Add(new ThreadRecord(
                     id,
                     reader.GetString(1),
-                    ReadTimestamp(reader, 12, 2),
-                    Max(ReadTimestamp(reader, 13, 3), ReadTimestamp(reader, 15, 14)),
+                    ReadTimestamp(reader, 11, 2),
+                    Max(ReadTimestamp(reader, 12, 3), ReadTimestamp(reader, 14, 13)),
                     reader.GetString(4),
                     chatName,
-                    reader.GetInt64(6),
-                    reader.GetInt64(7) != 0,
+                    reader.GetInt64(5),
+                    reader.GetInt64(6) != 0,
+                    reader.IsDBNull(7) ? null : reader.GetString(7),
                     reader.IsDBNull(8) ? null : reader.GetString(8),
                     reader.IsDBNull(9) ? null : reader.GetString(9),
                     reader.IsDBNull(10) ? null : reader.GetString(10),
-                    reader.IsDBNull(11) ? null : reader.GetString(11),
                     edge.Parent,
                     edge.Status));
             }
@@ -137,24 +136,34 @@ public sealed class CodexCatalog
             {
                 using var document = JsonDocument.Parse(line);
                 var root = document.RootElement;
-                if (!root.TryGetProperty("id", out var idElement) ||
+                if (root.ValueKind != JsonValueKind.Object ||
+                    !root.TryGetProperty("id", out var idElement) ||
+                    idElement.ValueKind != JsonValueKind.String ||
                     !root.TryGetProperty("thread_name", out var titleElement) ||
-                    !root.TryGetProperty("updated_at", out var updatedElement))
+                    titleElement.ValueKind != JsonValueKind.String ||
+                    !root.TryGetProperty("updated_at", out var updatedElement) ||
+                    updatedElement.ValueKind != JsonValueKind.String ||
+                    !updatedElement.TryGetDateTimeOffset(out var updated))
                 {
                     continue;
                 }
 
                 var id = idElement.GetString();
                 var title = titleElement.GetString();
-                var updatedText = updatedElement.GetString();
-                if (id is not null && title is not null && DateTimeOffset.TryParse(updatedText, out var updated))
+                if (string.IsNullOrWhiteSpace(id) || string.IsNullOrWhiteSpace(title))
+                {
+                    continue;
+                }
+
+                // If timestamps tie, prefer the last appended valid name.
+                if (!index.TryGetValue(id, out var current) || updated >= current.Updated)
                 {
                     index[id] = (title, updated);
                 }
             }
-            catch (JsonException)
+            catch (Exception exception) when (exception is JsonException or InvalidOperationException)
             {
-                // Ignore a partially written index line.
+                // A partially written line or malformed JSON string cannot replace a valid name.
             }
         }
 
@@ -191,9 +200,9 @@ public sealed class CodexCatalog
             }
 
             var fileTime = File.GetLastWriteTimeUtc(path);
-            index.TryGetValue(id, out var indexed);
-            var updated = indexed.Updated == default ? new DateTimeOffset(fileTime) : indexed.Updated;
-            var title = string.IsNullOrWhiteSpace(indexed.Title) ? string.Empty : indexed.Title;
+            var hasIndexedName = index.TryGetValue(id, out var indexed);
+            var updated = hasIndexedName ? indexed.Updated : new DateTimeOffset(fileTime);
+            var title = hasIndexedName ? indexed.Title : string.Empty;
             output.Add(new ThreadRecord(id, path, updated, updated, string.Empty, title, 0, archived, null, null, null, null, null, null));
         }
     }

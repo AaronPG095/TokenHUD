@@ -29,18 +29,18 @@ None
 ## Acceptance criteria
 
 - [x] AC1: Current indexed chat names survive out-of-order renames and malformed index entries, and missing names use a safe fallback without reading message content. verified: Self-test exercised both metadata paths, reordered and malformed names, and the neutral fallback.
-- [ ] AC2: Compact includes at most six unarchived top-level chats ordered by latest activity across each chat tree, including subagent activity.
-- [ ] AC3: Five-hour and weekly quotas are classified by their respective durations, independent of slot order. Missing, expired and unrelated windows remain unavailable.
-- [ ] AC4: An unavailable context measurement is shown as unavailable and stays distinguishable from a measured zero across Compact and Expanded. Stale monitoring data is identified.
-- [ ] AC5: The Windows solution builds and deterministic self-tests pass. A local Codex smoke check exercises available metadata and snapshots without disclosing chat content.
+- [x] AC2: Compact includes at most six unarchived top-level chats ordered by latest activity across each chat tree, including subagent activity. verified: SQLite fixture verified six unarchived roots ranked by subagent activity.
+- [x] AC3: Five-hour and weekly quotas are classified by their respective durations, independent of slot order. Missing, expired and unrelated windows remain unavailable. verified: Quota model and snapshot fixtures passed for swapped, expired, unrelated and partial observations.
+- [x] AC4: An unavailable context measurement is shown as unavailable and stays distinguishable from a measured zero across Compact and Expanded. Stale monitoring data is identified. verified: Context fixture passed for missing and zero usage. Inspected both WPF views and the paused or stale status path.
+- [x] AC5: The Windows solution builds and deterministic self-tests pass. A local Codex smoke check exercises available metadata and snapshots without disclosing chat content. verified: Solution built with zero warnings or errors and all 10 self-tests passed, including live Codex checks.
 
 ## Steps
 
-- [ ] Add deterministic metadata fixtures and fix current-name resolution (AC1).
-- [ ] Test and preserve six-chat membership and tree-based recency (AC2).
-- [ ] Add quota fixtures and fix supported window classification and freshness (AC3).
-- [ ] Carry measured versus unavailable context and source freshness through the display paths (AC4).
-- [ ] Run the Windows build, deterministic self-tests and local source smoke checks (AC5).
+- [x] Add deterministic metadata fixtures and fix current-name resolution (AC1). verified: Chat name and local catalog smoke tests passed.
+- [x] Test and preserve six-chat membership and tree-based recency (AC2). verified: Snapshot fixture passed, including pinning without changing Compact membership.
+- [x] Add quota fixtures and fix supported window classification and freshness (AC3). verified: QuotaTests and the retained-quota snapshot fixture passed.
+- [x] Carry measured versus unavailable context and source freshness through the display paths (AC4). verified: Context fixture passed and the WPF data and freshness update paths were inspected.
+- [x] Run the Windows build, deterministic self-tests and local source smoke checks (AC5). verified: Windows solution build and all 10 self-tests passed.
 
 ## Risks
 

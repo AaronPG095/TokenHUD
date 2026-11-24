@@ -38,17 +38,19 @@ public sealed class SnapshotBuilder
         }
 
         var trackedRoot = pinned ?? recentRoots.FirstOrDefault();
+        var observedAt = DateTimeOffset.UtcNow;
         var usageTasks = recentRoots
             .DistinctBy(item => item.Id)
-            .Select(root => BuildChatUsageAsync(root, children, policy, cancellationToken))
+            .Select(root => BuildChatUsageAsync(root, children, policy, observedAt, cancellationToken))
             .ToArray();
-        var recent = await Task.WhenAll(usageTasks).ConfigureAwait(false);
+        var sampled = await Task.WhenAll(usageTasks).ConfigureAwait(false);
+        var recent = sampled.Select(item => item.Chat).ToArray();
 
         ChatUsage? tracked = null;
         if (trackedRoot is not null)
         {
             tracked = recent.FirstOrDefault(item => item.Root.Id == trackedRoot.Id)
-                ?? await BuildChatUsageAsync(trackedRoot, children, policy, cancellationToken).ConfigureAwait(false);
+                ?? (await BuildChatUsageAsync(trackedRoot, children, policy, observedAt, cancellationToken).ConfigureAwait(false)).Chat;
         }
 
         var normalizedSearch = search?.Trim();
@@ -61,12 +63,8 @@ public sealed class SnapshotBuilder
             .Take(200)
             .ToArray();
 
-        var latestQuota = recent
-            .SelectMany(item => item.Threads)
-            .Where(item => item.Latest?.Quota is not null)
-            .OrderByDescending(item => item.Latest!.Timestamp)
-            .Select(item => item.Latest!.Quota)
-            .FirstOrDefault();
+        var refreshedAt = DateTimeOffset.Now;
+        var latestQuota = AccountQuota.LatestFrom(sampled.SelectMany(item => item.QuotaObservations), refreshedAt);
         var parsedCount = recent.SelectMany(item => item.Threads).Count(item => item.Latest is not null);
 
         return new HudSnapshot(
@@ -74,20 +72,20 @@ public sealed class SnapshotBuilder
             recent,
             searchable,
             latestQuota,
-            DateTimeOffset.Now,
+            refreshedAt,
             catalog.DatabaseAvailable,
             parsedCount,
             catalog.Status);
     }
 
-    private async Task<ChatUsage> BuildChatUsageAsync(
+    private async Task<(ChatUsage Chat, UsageSnapshot[] QuotaObservations)> BuildChatUsageAsync(
         ThreadRecord root,
         IReadOnlyDictionary<string, ThreadRecord[]> children,
         BudgetPolicy policy,
+        DateTimeOffset observedAt,
         CancellationToken cancellationToken)
     {
         var flattened = Flatten(root, children);
-        var observedAt = DateTimeOffset.UtcNow;
         var histories = await Task.WhenAll(flattened.Select(async item =>
             (item.Thread, item.Depth, History: item.Depth == 0 || item.Thread.IsActivelyRunning(observedAt)
                 ? await _usage.GetAsync(item.Thread.RolloutPath, cancellationToken).ConfigureAwait(false)
@@ -101,17 +99,19 @@ public sealed class SnapshotBuilder
 
         var rootBreakdown = breakdown[0];
         var treeConsumption = breakdown.Aggregate(TokenBreakdown.Empty, (total, item) =>
-            total + (item.Latest?.SessionTotal ?? new TokenBreakdown(0, 0, 0, 0, 0, item.Thread.CatalogTokensUsed)));
+            total + (item.Latest is { HasSessionTotal: true } latest
+                ? latest.SessionTotal
+                : new TokenBreakdown(0, 0, 0, 0, 0, item.Thread.CatalogTokensUsed)));
         var highestChild = breakdown
             .Skip(1)
-            .Where(item => item.Latest is not null && item.Thread.IsActivelyRunning(observedAt))
+            .Where(item => item.Analysis.Zone != BudgetZone.Unavailable && item.Thread.IsActivelyRunning(observedAt))
             .OrderByDescending(item => item.Analysis.Load)
             .FirstOrDefault();
         var lastActivity = breakdown
             .Select(item => Max(item.Thread.UpdatedAt, item.Latest?.Timestamp ?? DateTimeOffset.MinValue))
             .Max();
 
-        return new ChatUsage(
+        var chat = new ChatUsage(
             root,
             rootBreakdown.Latest,
             rootBreakdown.Analysis,
@@ -119,6 +119,10 @@ public sealed class SnapshotBuilder
             breakdown,
             highestChild,
             lastActivity);
+        var quotaObservations = histories.SelectMany(item => item.History)
+            .Where(item => item.Quota is not null)
+            .ToArray();
+        return (chat, quotaObservations);
     }
 
     private static IReadOnlyList<(ThreadRecord Thread, int Depth)> Flatten(
