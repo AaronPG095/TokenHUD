@@ -66,7 +66,7 @@
                                   StrokeStartLineCap="Round" StrokeEndLineCap="Round" Fill="Transparent" />
                         </Viewbox>
                     </Button>
-                    <Button Style="{StaticResource IconButton}" Click="HideButton_Click" ToolTip="Hide to notification area"
+                    <Button x:Name="HideButton" Style="{StaticResource IconButton}" Click="HideButton_Click" ToolTip="Hide to notification area"
                             automation:AutomationProperties.Name="Hide to notification area">
                         <Viewbox Width="16" Height="16">
                             <Path Data="M5,17 L19,17" Stroke="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}"

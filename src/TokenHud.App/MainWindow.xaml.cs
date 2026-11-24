@@ -121,6 +121,8 @@ public partial class MainWindow : Window
         if (_demo)
         {
             Title = "Token HUD Demo";
+            HideButton.ToolTip = "Close demo";
+            AutomationProperties.SetName(HideButton, "Close demo");
         }
         else
         {
