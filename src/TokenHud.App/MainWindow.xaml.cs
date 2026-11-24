@@ -52,13 +52,15 @@ public partial class MainWindow : Window
         SettingsStore settingsStore,
         RollingDiagnostics diagnostics,
         ThemeService theme,
-        bool demo)
+        bool demo,
+        MetricsHistoryStore? history = null)
     {
         _settings = settings;
         _settingsStore = settingsStore;
         _diagnostics = diagnostics;
         _theme = theme;
         _demo = demo;
+        _history = history;
         _budgetProfiles = CreateBudgetProfiles();
         InitializeComponent();
 
@@ -200,6 +202,7 @@ public partial class MainWindow : Window
             }
 
             UpdateSnapshot(snapshot);
+            _ = RecordHistoryAsync(snapshot);
         });
 
     private void RefreshNavigation()
@@ -268,6 +271,7 @@ public partial class MainWindow : Window
             RefreshBudgetSettings(tracked);
             UpdateMonitorStatus();
             CheckAlerts(snapshot);
+            RefreshHistory(tracked);
         }
         finally
         {
@@ -319,6 +323,7 @@ public partial class MainWindow : Window
     private void UpdateMonitorStatus()
     {
         UpdateAlertControls();
+        PruneHistoryWhenDue(DateTimeOffset.UtcNow);
         var snapshot = _snapshot;
         var paused = !_demo && _settings.MonitoringPaused;
         // Allow three missed polling intervals before marking a running monitor stale.
@@ -665,6 +670,8 @@ public partial class MainWindow : Window
             NotifyOverBudgetCheckBox.IsChecked = _settings.AlertPreferences.OverBudget;
             UpdateAlertControls();
             RefreshBudgetSettings(_snapshot?.Tracked);
+            ApplyHistorySettings();
+            ApplyPrivacySearch();
             PauseButton.Content = _settings.MonitoringPaused ? "Resume monitoring" : "Pause monitoring";
             PrivacyButton.Foreground = FindBrush(_settings.PrivacyMode ? "PrimaryBrush" : "MutedBrush");
             PrivacyButton.ToolTip = _settings.PrivacyMode ? "Show chat names" : "Hide chat names";
@@ -808,6 +815,7 @@ public partial class MainWindow : Window
         RememberCurrentSize();
         _settings.Expanded = !_settings.Expanded;
         ApplyViewMode();
+        RefreshHistory(_snapshot?.Tracked);
         ScheduleSave();
     }
 
@@ -818,12 +826,28 @@ public partial class MainWindow : Window
         PrivacyButton.Foreground = FindBrush(_settings.PrivacyMode ? "PrimaryBrush" : "MutedBrush");
         PrivacyButton.ToolTip = _settings.PrivacyMode ? "Show chat names" : "Hide chat names";
         AutomationProperties.SetName(PrivacyButton, _settings.PrivacyMode ? "Show chat names" : "Hide chat names");
+        ApplyPrivacySearch();
         if (_snapshot is not null)
         {
             UpdateSnapshot(_snapshot);
         }
 
+        RefreshNavigation();
         ScheduleSave();
+    }
+
+    private void ApplyPrivacySearch()
+    {
+        SearchBox.IsEnabled = !_settings.PrivacyMode;
+        var hint = _settings.PrivacyMode ? "Search is paused in Privacy Mode" : "Search local chat names, IDs, and project paths";
+        SearchBox.ToolTip = hint;
+        AutomationProperties.SetHelpText(SearchBox, hint);
+        if (_settings.PrivacyMode)
+        {
+            _searchTimer.Stop();
+            _searchText = string.Empty;
+            SearchBox.Clear();
+        }
     }
 
     private void ToggleTopmost()
@@ -1013,7 +1037,7 @@ public partial class MainWindow : Window
 
     private void SearchBox_TextChanged(object sender, System.Windows.Controls.TextChangedEventArgs e)
     {
-        if (_updatingUi)
+        if (_updatingUi || _settings.PrivacyMode)
         {
             return;
         }

@@ -7,6 +7,7 @@ public sealed class HudSettings
     public long ContextBudget { get; set; } = 150_000;
     public long? CodexContextBudget { get; set; }
     public Dictionary<string, long> ChatContextBudgets { get; set; } = new(StringComparer.Ordinal);
+    public MetricsHistoryRetention HistoryRetention { get; set; } = MetricsHistoryRetention.Days30;
     public string? PinnedThreadId { get; set; }
     public bool PrivacyMode { get; set; }
     public bool AlwaysOnTop { get; set; } = true;
@@ -34,11 +35,13 @@ public sealed class AppDataPaths
         Root = root ?? Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "TokenHUD");
         Settings = Path.Combine(Root, "settings.json");
         Diagnostics = Path.Combine(Root, "diagnostics");
+        MetricsHistory = Path.Combine(Root, "metrics-history.sqlite");
     }
 
     public string Root { get; }
     public string Settings { get; }
     public string Diagnostics { get; }
+    public string MetricsHistory { get; }
 }
 
 public sealed class SettingsStore

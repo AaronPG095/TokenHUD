@@ -58,6 +58,7 @@ public sealed class RolloutReader
                     ModelContextWindow = previous.ModelContextWindow,
                     HasContext = previous.HasContext,
                     HasSessionTotal = previous.HasSessionTotal,
+                    ContextObservedAt = previous.ContextObservedAt,
                 };
             }
 

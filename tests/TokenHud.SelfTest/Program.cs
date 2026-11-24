@@ -3,6 +3,7 @@ using TokenHud.Core;
 var tests = new List<(string Name, Func<Task> Run)>
 {
     ("parses token events", ParseTokenEventAsync),
+    ("stores only retained local metrics", MetricsHistoryTests.StoresOnlyRetainedMeasurementsAsync),
     ("enforces budget boundaries", BudgetBoundariesAsync),
     ("resolves inherited budgets against current model limits", ContextBudgetTests.ResolvesHierarchyAndReportedLimitsAsync),
     ("deduplicates zone alerts and respects cooldown and snooze", BudgetAlertTests.RunAsync),

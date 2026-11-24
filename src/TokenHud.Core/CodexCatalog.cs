@@ -233,7 +233,7 @@ public sealed class CodexCatalog
 
     private static DateTimeOffset Max(DateTimeOffset left, DateTimeOffset right) => left > right ? left : right;
 
-    private static void EnsureProvider()
+    internal static void EnsureProvider()
     {
         if (_providerInitialized)
         {
