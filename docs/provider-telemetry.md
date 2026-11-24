@@ -28,17 +28,19 @@ Use the full path to `TokenHUD.exe` in the appropriate settings file. These are 
 
 ### Claude Code
 
-In the Claude Code user settings file, `~/.claude/settings.json`, add:
+In the Claude Code user settings file, `~/.claude/settings.json`, use the command for your status-line shell. For Git Bash, use a quoted executable path with forward slashes:
 
 ```json
 {
   "statusLine": {
     "type": "command",
-    "command": "cmd.exe /d /c call \"C:\\Path To TokenHUD\\TokenHUD.exe\" --statusline claude-code",
+    "command": "\"C:/Path To TokenHUD/TokenHUD.exe\" --statusline claude-code",
     "padding": 0
   }
 }
 ```
+
+If Claude Code uses PowerShell instead, set `command` to `& 'C:/Path To TokenHUD/TokenHUD.exe' --statusline claude-code`. Keep the rest of the block the same.
 
 Context occupancy uses the reported input plus cache-read and cache-write input when those counts are available. Latest input and output and the five-hour or weekly quota are shown only when Claude reports them. Remove the entry or restore your previous status line to stop sending readings. [Claude Code status-line documentation](https://code.claude.com/docs/en/statusline)
 
