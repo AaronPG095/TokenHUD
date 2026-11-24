@@ -27,17 +27,17 @@ None
 
 ## Acceptance criteria
 
-- [ ] AC1: A reproducible Windows x64 package builds from the native project and supports per-user installation and uninstall, with validation and safe upgrade behavior. Removing the app preserves metrics and settings by default.
-- [ ] AC2: The app can recover from startup preference, single-instance and periodic source failures without corrupting settings or leaking a background process.
-- [ ] AC3: A user can export a reviewable, sanitized diagnostic report without chat names, identifiers, paths, content, credentials, or token history.
-- [ ] AC4: The Windows build and self-tests pass. A disposable install, launch and uninstall smoke and app-only demo captures verify release output. Any unavailable signing or physical DPI validation is recorded with scope and reason.
+- [x] AC1: A reproducible Windows x64 package builds from the native project and supports per-user installation and uninstall, with validation and safe upgrade behavior. Removing the app preserves metrics and settings by default. verified: Private self-contained archive checksum verified. Isolated install, update, invalid package rejection and uninstall data preservation passed.
+- [x] AC2: The app can recover from startup preference, single-instance and periodic source failures without corrupting settings or leaking a background process. verified: Isolated native single-instance activation and shutdown, locked source recovery at 15s, and settings integrity fixtures passed. Registry failures reviewed by code.
+- [x] AC3: A user can export a reviewable, sanitized diagnostic report without chat names, identifiers, paths, content, credentials, or token history. verified: Allowlist and inaccessible diagnostics fixture passed. Export UI previews the report before choosing a local destination.
+- [x] AC4: The Windows build and self-tests pass. A disposable install, launch and uninstall smoke and app-only demo captures verify release output. Any unavailable signing or physical DPI validation is recorded with scope and reason. verified: 15 of 15 checks, private package smoke and app-only demo PNGs at 100 and 200 percent rendering. Physical mixed DPI and signing unavailable.
 
 ## Steps
 
-- [ ] Implement package build, install and uninstall scripts with smoke coverage (AC1).
-- [ ] Verify and harden Windows startup, tray, single-instance and recovery paths (AC2).
-- [ ] Implement and verify the user-initiated diagnostic export (AC3).
-- [ ] Build the package and app-only demo visuals, and verify the release paths (AC4).
+- [x] Implement package build, install and uninstall scripts with smoke coverage (AC1). verified: Disposable Windows x64 install, update, demo launch and uninstall and path-rejection smoke passed.
+- [x] Verify and harden Windows startup, tray, single-instance and recovery paths (AC2). verified: Second-instance, close and restart smoke, monitor recovery, and overlapping and cancelled save fixture passed.
+- [x] Implement and verify the user-initiated diagnostic export (AC3). verified: Diagnostic fixture excludes source paths, titles, identifiers and token readings.
+- [x] Build the package and app-only demo visuals, and verify the release paths (AC4). verified: Final archive and app-only renders checked. Release remains unsigned and private.
 
 ## Risks
 
