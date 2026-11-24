@@ -1,11 +1,13 @@
 ---
 title: Plan - Feature: Provider Telemetry Foundation
 ticket: https://app.notion.com/p/TH-Plan-Feature-Provider-Telemetry-Foundation-4220b9c6786f8127b690f60dc5e596fa
-status: planned
+status: in-progress
 appetite: L
 impact: minor
 devTicketKey: TH:TH-Plan-Provider-Telemetry-Foundation-2026-11
 agent: Codex
+branch: codex/tokenhud-provider-telemetry
+worktree: TokenHUD
 ---
 # Provider Telemetry Foundation
 
@@ -25,16 +27,16 @@ None
 
 ## Acceptance criteria
 
-- [ ] AC1: The normalized local reading model identifies source and session independently, distinguishes live context, historical context, latest usage and quota, and preserves missing versus zero.
-- [ ] AC2: A bounded opt-in ingest path accepts typed JSON and writes only an allowlisted metrics record to local storage. Raw input, secrets, prompts and paths are excluded. Opaque keys, atomic replace and freshness validation are verified.
-- [ ] AC3: Expanded shows connected sources, fresh readings, stale data and the verified coverage of each source while Codex keeps its existing Compact behavior.
-- [ ] AC4: The Windows solution and deterministic tests pass, with a synthetic WPF session exercising source status, a connected reading and qualified missing fields.
+- [x] AC1: The normalized local reading model identifies source and session independently, distinguishes live context, historical context, latest usage and quota, and preserves missing versus zero. verified: Fixtures verified provider and session identity, measured zero, partial exchange, historical context and typed quota.
+- [x] AC2: A bounded opt-in ingest path accepts typed JSON and writes only an allowlisted metrics record to local storage. Raw input, secrets, prompts and paths are excluded. Opaque keys, atomic replace and freshness validation are verified. verified: Verified oversize rejection, typed validation, opaque keys and atomic concurrent replace using temporary storage.
+- [x] AC3: Expanded shows connected sources, fresh readings, stale data and the verified coverage of each source while Codex keeps its existing Compact behavior. verified: WPF verified connected and stale source rows, missing readings and consumer feed limitations; local Codex smoke passed.
+- [x] AC4: The Windows solution and deterministic tests pass, with a synthetic WPF session exercising source status, a connected reading and qualified missing fields. verified: Clean Windows build, 13 of 13 integrated checks, and synthetic WPF actual provider panel load passed.
 
 ## Steps
 
-- [ ] Implement the local provider reading and storage contract (AC1 and AC2).
-- [ ] Wire bounded ingest and the connected-source panel (AC2 and AC3).
-- [ ] Verify Windows build, local-feed fixtures and source presentation (AC4).
+- [x] Implement the local provider reading and storage contract (AC1 and AC2). verified: Synthetic source and privacy projection fixtures passed, including concurrent deliveries and older replay.
+- [x] Wire bounded ingest and the connected-source panel (AC2 and AC3). verified: Built the CLI import entry and verified the WPF view using disposable data.
+- [x] Verify Windows build, local-feed fixtures and source presentation (AC4). verified: Windows solution, telemetry fixture, live Codex and WPF panel verification passed.
 
 ## Risks
 

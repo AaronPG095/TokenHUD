@@ -342,6 +342,7 @@ public partial class MainWindow : Window
     {
         UpdateAlertControls();
         PruneHistoryWhenDue(DateTimeOffset.UtcNow);
+        RefreshProviderSources();
         var snapshot = _snapshot;
         var paused = !_demo && _settings.MonitoringPaused;
         var refreshFailed = !paused && _monitor?.RefreshFailed == true;

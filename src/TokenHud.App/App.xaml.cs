@@ -11,6 +11,15 @@ public partial class App : System.Windows.Application
     protected override void OnStartup(StartupEventArgs e)
     {
         base.OnStartup(e);
+        if (e.Args.Length == 1 && e.Args[0].Equals("--ingest-provider", StringComparison.OrdinalIgnoreCase))
+        {
+            using var input = Console.OpenStandardInput();
+            var store = new ProviderTelemetryStore(new AppDataPaths().ProviderTelemetry);
+            var result = store.ImportAsync(input, DateTimeOffset.UtcNow).GetAwaiter().GetResult();
+            Shutdown(result == ProviderImportResult.Imported ? 0 : result == ProviderImportResult.Invalid ? 2 : 1);
+            return;
+        }
+
         var demo = e.Args.Contains("--demo", StringComparer.OrdinalIgnoreCase);
         if (!demo)
         {
@@ -33,7 +42,8 @@ public partial class App : System.Windows.Application
             : settingsStore.LoadAsync().GetAwaiter().GetResult();
         var diagnostics = new RollingDiagnostics(appData);
         var history = demo ? null : new MetricsHistoryStore(appData.MetricsHistory);
-        var window = new MainWindow(settings, settingsStore, diagnostics, _theme, demo, history);
+        var feed = new ProviderTelemetryStore(appData.ProviderTelemetry);
+        var window = new MainWindow(settings, settingsStore, diagnostics, _theme, demo, history) { ProviderFeed = demo ? null : feed };
         MainWindow = window;
         _singleInstance?.StartListening(() => Dispatcher.BeginInvoke(window.ShowFromTray));
         window.Show();
