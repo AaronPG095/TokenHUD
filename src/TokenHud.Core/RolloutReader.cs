@@ -151,13 +151,25 @@ public sealed class RolloutReader
             return null;
         }
 
-        return new TokenBreakdown(
-            GetInt64(element, "input_tokens"),
-            GetInt64(element, "cached_input_tokens"),
-            GetInt64(element, "cache_write_input_tokens"),
-            GetInt64(element, "output_tokens"),
-            GetInt64(element, "reasoning_output_tokens"),
-            totalTokens);
+        var fields = TokenFields.Total;
+        var input = ReadField("input_tokens", TokenFields.Input);
+        var cached = ReadField("cached_input_tokens", TokenFields.CachedInput);
+        var write = ReadField("cache_write_input_tokens", TokenFields.CacheWrite);
+        var output = ReadField("output_tokens", TokenFields.Output);
+        var reasoning = ReadField("reasoning_output_tokens", TokenFields.Reasoning);
+        return new TokenBreakdown(input, cached, write, output, reasoning, totalTokens) { ReportedFields = fields };
+
+        long ReadField(string name, TokenFields field)
+        {
+            if (element.TryGetProperty(name, out var value) && value.ValueKind == JsonValueKind.Number &&
+                value.TryGetInt64(out var tokens) && tokens >= 0)
+            {
+                fields |= field;
+                return tokens;
+            }
+
+            return 0;
+        }
     }
 
     private static AccountQuota ParseQuota(JsonElement limits)
@@ -227,10 +239,6 @@ public sealed class RolloutReader
             return null;
         }
     }
-
-    private static long GetInt64(JsonElement element, string name) =>
-        element.TryGetProperty(name, out var value) && value.ValueKind == JsonValueKind.Number &&
-        value.TryGetInt64(out var parsed) && parsed >= 0 ? parsed : 0;
 
     private static string? GetString(JsonElement element, string name) =>
         element.TryGetProperty(name, out var value) && value.ValueKind == JsonValueKind.String ? value.GetString() : null;

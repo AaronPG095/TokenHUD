@@ -9,6 +9,19 @@ public enum BudgetZone
     Unavailable,
 }
 
+[Flags]
+public enum TokenFields
+{
+    None = 0,
+    Input = 1,
+    CachedInput = 2,
+    CacheWrite = 4,
+    Output = 8,
+    Reasoning = 16,
+    Total = 32,
+    All = Input | CachedInput | CacheWrite | Output | Reasoning | Total,
+}
+
 public sealed record TokenBreakdown(
     long InputTokens,
     long CachedInputTokens,
@@ -17,8 +30,22 @@ public sealed record TokenBreakdown(
     long ReasoningOutputTokens,
     long TotalTokens)
 {
-    public static TokenBreakdown Empty { get; } = new(0, 0, 0, 0, 0, 0);
+    public static TokenBreakdown Empty { get; } = new(0, 0, 0, 0, 0, 0) { ReportedFields = TokenFields.None };
+    public TokenFields ReportedFields { get; init; } = TokenFields.All;
     public long ContextWindowTokens => Math.Max(0, TotalTokens - ReasoningOutputTokens);
+
+    public bool Reports(TokenFields fields) => (ReportedFields & fields) == fields;
+
+    public long? NewInputTokens =>
+        Reports(TokenFields.Input | TokenFields.CachedInput | TokenFields.CacheWrite) &&
+        CachedInputTokens <= InputTokens && CacheWriteInputTokens <= InputTokens - CachedInputTokens
+            ? InputTokens - CachedInputTokens - CacheWriteInputTokens
+            : null;
+
+    public long? VisibleOutputTokens =>
+        Reports(TokenFields.Output | TokenFields.Reasoning) && ReasoningOutputTokens <= OutputTokens
+            ? OutputTokens - ReasoningOutputTokens
+            : null;
 
     public static TokenBreakdown operator +(TokenBreakdown left, TokenBreakdown right) => new(
         left.InputTokens + right.InputTokens,

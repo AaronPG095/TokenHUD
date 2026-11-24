@@ -18,6 +18,17 @@ internal static class ContextReadingTests
             """;
 
         var reader = new RolloutReader();
+        const string partialFlow = """
+            {"type":"event_msg","payload":{"type":"token_count","info":{"last_token_usage":{"input_tokens":100,"cached_input_tokens":0,"cache_write_input_tokens":"unknown","output_tokens":0,"reasoning_output_tokens":0,"total_tokens":100}}}}
+            """;
+        var flow = reader.TryParseUsage(partialFlow)!.Context;
+        Check(flow.Reports(TokenFields.CachedInput) && flow.CachedInputTokens == 0,
+            "An explicit zero cached input should remain a measurement.");
+        Check(!flow.Reports(TokenFields.CacheWrite) && flow.NewInputTokens is null,
+            "An unreported cache write should make the exact new-input split unavailable.");
+        Check(flow.VisibleOutputTokens == 0, "A complete measured zero output split should stay available.");
+        Check((flow with { ReasoningOutputTokens = 1 }).VisibleOutputTokens is null,
+            "Inconsistent output counts should not produce a fabricated visible-output count.");
         var policy = new BudgetPolicy();
         var quota = reader.TryParseUsage(quotaOnly);
         Check(quota is { HasContext: false, HasSessionTotal: false }, "Quota alone must not supply a context or session measurement.");

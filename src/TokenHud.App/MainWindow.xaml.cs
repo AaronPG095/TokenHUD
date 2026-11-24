@@ -12,6 +12,7 @@ using System.Windows.Media;
 using System.Windows.Shell;
 using System.Windows.Threading;
 using TokenHud.Core;
+using ItemsControl = System.Windows.Controls.ItemsControl;
 
 namespace TokenHud.App;
 
@@ -37,9 +38,11 @@ public partial class MainWindow : Window
     private readonly System.Windows.Forms.ToolStripMenuItem _startupMenu;
     private readonly WindowsNotificationService? _notifications;
     private HudSnapshot? _snapshot;
+    private string? _selectedThreadId;
     private string _searchText = string.Empty;
     private bool _updatingUi;
     private bool _applyingViewMode;
+    private bool _showChatBrowser;
     private bool _alertsInitialized;
     private bool _quitting;
 
@@ -138,6 +141,7 @@ public partial class MainWindow : Window
         Loaded += MainWindow_Loaded;
         LocationChanged += Window_GeometryChanged;
         SizeChanged += Window_GeometryChanged;
+        DpiChanged += (_, _) => _ = Dispatcher.InvokeAsync(EnsureWithinWorkArea, DispatcherPriority.Loaded);
     }
 
     public void ShowFromTray()
@@ -160,21 +164,62 @@ public partial class MainWindow : Window
     {
         if (_demo)
         {
-            UpdateSnapshot(DemoData.Create());
+            RefreshNavigation();
         }
 
         UpdateMonitorStatus();
     }
 
     private MonitorOptions GetMonitorOptions() => new(
-        _settings.PinnedThreadId,
+        _selectedThreadId ?? _settings.PinnedThreadId,
         _settings.ContextBudget,
         _settings.ShowArchived,
         _searchText,
         _settings.MonitoringPaused);
 
-    private void Monitor_SnapshotChanged(object? sender, HudSnapshot snapshot) =>
-        Dispatcher.BeginInvoke(() => UpdateSnapshot(snapshot));
+    private void Monitor_SnapshotChanged(object? sender, (MonitorOptions Options, HudSnapshot Snapshot) refresh) =>
+        Dispatcher.BeginInvoke(() =>
+        {
+            if (refresh.Options != GetMonitorOptions())
+            {
+                return;
+            }
+
+            var snapshot = refresh.Snapshot;
+            if (refresh.Options.TrackedThreadId is { } target &&
+                snapshot.Tracked?.Threads.Any(thread => thread.Thread.Id == target) != true)
+            {
+                snapshot = snapshot with { Tracked = null };
+            }
+
+            UpdateSnapshot(snapshot);
+        });
+
+    private void RefreshNavigation()
+    {
+        var options = GetMonitorOptions();
+        if (_demo)
+        {
+            UpdateSnapshot(DemoData.Create(options.TrackedThreadId, options.IncludeArchived, options.Search));
+            return;
+        }
+
+        _monitor?.RequestRefresh();
+    }
+
+    private void RefreshInspection()
+    {
+        if (!_demo && _snapshot is { } snapshot)
+        {
+            var target = GetMonitorOptions().TrackedThreadId;
+            var tracked = target is null ? snapshot.RecentChats.FirstOrDefault()
+                : snapshot.Tracked?.Root.Id == target ? snapshot.Tracked
+                : snapshot.RecentChats.FirstOrDefault(chat => chat.Root.Id == target);
+            UpdateSnapshot(snapshot with { Tracked = tracked });
+        }
+
+        RefreshNavigation();
+    }
 
     private void UpdateSnapshot(HudSnapshot snapshot)
     {
@@ -183,23 +228,21 @@ public partial class MainWindow : Window
         _updatingUi = true;
         try
         {
+            UpdateNavigationState(tracked);
             if (tracked is null)
             {
-                TrackedTitle.Text = "No local Codex chats found";
-                ModeLabel.Text = "Waiting for a chat";
+                TrackedTitle.Text = GetMonitorOptions().TrackedThreadId is null
+                    ? "No local Codex chats found"
+                    : "Selected chat detail unavailable";
                 UpdateContextMeter(null);
                 OriginStatusLabel.Text = "Context origin unavailable";
                 _threadItems.Clear();
+                UpdateThreadStatus();
                 UpdateBreakdown(null);
             }
             else
             {
                 TrackedTitle.Text = DisplayTitle(tracked.Root);
-                var isPinned = _settings.PinnedThreadId is not null;
-                ModeLabel.Text = isPinned ? "Selected chat" : "Most recent chat";
-                PinButton.Foreground = FindBrush(isPinned ? "PrimaryBrush" : "MutedBrush");
-                PinButton.ToolTip = isPinned ? "Follow latest chat" : "Pin current chat";
-                AutomationProperties.SetName(PinButton, isPinned ? "Follow latest chat" : "Pin current chat");
                 UpdateContextMeter(tracked.Analysis);
                 OriginStatusLabel.Text = tracked.Analysis.Zone == BudgetZone.Unavailable
                     ? "Context measurement unavailable"
@@ -222,11 +265,34 @@ public partial class MainWindow : Window
         }
     }
 
+    private void UpdateNavigationState(ChatUsage? tracked)
+    {
+        var target = _selectedThreadId ?? tracked?.Root.Id;
+        var isPinned = IsPinnedChat(target, tracked);
+        ModeLabel.Text = isPinned ? "Pinned chat"
+            : _selectedThreadId is not null ? "Selected chat"
+            : _settings.PinnedThreadId is not null ? "Pinned chat unavailable"
+            : "Following latest chat";
+        PinButton.IsEnabled = target is not null;
+        PinButton.Content = isPinned ? "Unpin chat" : "Pin chat";
+        PinButton.Foreground = FindBrush(isPinned ? "PrimaryBrush" : "MutedBrush");
+        var pinLabel = isPinned ? "Unpin chat and follow latest" : "Pin current chat";
+        PinButton.ToolTip = pinLabel;
+        AutomationProperties.SetName(PinButton, pinLabel);
+        FollowLatestButton.IsEnabled = GetMonitorOptions().TrackedThreadId is not null;
+    }
+
+    private bool IsPinnedChat(string? id, ChatUsage? tracked) =>
+        _settings.PinnedThreadId is { } pinned &&
+        (id == pinned || (id is not null && id == tracked?.Root.Id &&
+            tracked.Threads.Any(thread => thread.Thread.Id == pinned)));
+
     private void UpdateContextMeter(ContextAnalysis? analysis)
     {
         var zone = analysis?.Zone ?? BudgetZone.Unavailable;
         var zoneBrush = FindBrush(ZoneBrushName(zone));
         ContextValue.Text = FormatContext(analysis);
+        ContextValue.ToolTip = zone == BudgetZone.Unavailable ? null : $"{analysis!.Load:N0} context tokens";
         BudgetValue.Text = $" / {FormatTokens(_settings.ContextBudget)}";
         ContextMeter.Visibility = zone == BudgetZone.Unavailable ? Visibility.Hidden : Visibility.Visible;
         ContextMeter.Value = Math.Clamp(analysis?.BudgetPercent ?? 0, 0, 100);
@@ -268,23 +334,29 @@ public partial class MainWindow : Window
 
     private void UpdateBreakdown(ChatUsage? tracked)
     {
-        var hasContext = tracked is { Analysis.Zone: not BudgetZone.Unavailable, Latest.HasContext: true };
-        var flow = hasContext ? tracked!.Latest!.Context : TokenBreakdown.Empty;
-        var newInput = Math.Max(0, flow.InputTokens - flow.CachedInputTokens - flow.CacheWriteInputTokens);
-        var visibleOutput = Math.Max(0, flow.OutputTokens - flow.ReasoningOutputTokens);
+        var flow = tracked?.Latest is { HasContext: true } latest ? latest.Context : TokenBreakdown.Empty;
+        var newInput = flow.NewInputTokens;
+        var visibleOutput = flow.VisibleOutputTokens;
 
-        InputValue.Text = FormatMeasuredTokens(flow.InputTokens, hasContext);
-        CachedValue.Text = FormatMeasuredTokens(flow.CachedInputTokens, hasContext);
-        CacheWriteValue.Text = FormatMeasuredTokens(flow.CacheWriteInputTokens, hasContext);
-        NewInputValue.Text = FormatMeasuredTokens(newInput, hasContext);
-        OutputValue.Text = FormatMeasuredTokens(flow.OutputTokens, hasContext);
-        ReasoningValue.Text = FormatMeasuredTokens(flow.ReasoningOutputTokens, hasContext);
-        VisibleOutputValue.Text = FormatMeasuredTokens(visibleOutput, hasContext);
+        InputValue.Text = FormatMeasuredTokens(flow.InputTokens, flow.Reports(TokenFields.Input));
+        CachedValue.Text = FormatMeasuredTokens(flow.CachedInputTokens, flow.Reports(TokenFields.CachedInput));
+        CacheWriteValue.Text = FormatMeasuredTokens(flow.CacheWriteInputTokens, flow.Reports(TokenFields.CacheWrite));
+        NewInputValue.Text = FormatMeasuredTokens(newInput.GetValueOrDefault(), newInput.HasValue);
+        OutputValue.Text = FormatMeasuredTokens(flow.OutputTokens, flow.Reports(TokenFields.Output));
+        ReasoningValue.Text = FormatMeasuredTokens(flow.ReasoningOutputTokens, flow.Reports(TokenFields.Reasoning));
+        VisibleOutputValue.Text = FormatMeasuredTokens(visibleOutput.GetValueOrDefault(), visibleOutput.HasValue);
 
+        TokenFlowStatusLabel.Text = flow.ReportedFields == TokenFields.None ? "Latest exchange unavailable"
+            : newInput is null || visibleOutput is null ? "Latest exchange · unreported values shown as —"
+            : "Latest exchange";
+        TokenFlowStatusLabel.ToolTip = tracked?.Latest is { HasSessionTotal: true } session
+            ? $"Session totals: {FormatMeasuredTokens(session.SessionTotal.InputTokens, session.SessionTotal.Reports(TokenFields.Input))} in · {FormatMeasuredTokens(session.SessionTotal.OutputTokens, session.SessionTotal.Reports(TokenFields.Output))} out"
+            : null;
+        var showInputSplit = newInput.HasValue;
         SetFlowColumns(InputCachedColumn, InputWriteColumn, InputNewColumn,
-            flow.CachedInputTokens, flow.CacheWriteInputTokens, newInput);
+            showInputSplit ? flow.CachedInputTokens : 0, showInputSplit ? flow.CacheWriteInputTokens : 0, newInput.GetValueOrDefault());
         SetFlowColumns(OutputReasoningColumn, OutputVisibleColumn,
-            flow.ReasoningOutputTokens, visibleOutput);
+            visibleOutput.HasValue ? flow.ReasoningOutputTokens : 0, visibleOutput.GetValueOrDefault());
     }
 
     private static void SetFlowColumns(
@@ -312,8 +384,7 @@ public partial class MainWindow : Window
 
     private void UpdateThreadGrid(ChatUsage tracked)
     {
-        _threadItems.Clear();
-        foreach (var item in tracked.Threads)
+        ReconcileRows(ThreadGrid, _threadItems, tracked.Threads.Select(item =>
         {
             var name = _settings.PrivacyMode
                 ? (item.Depth == 0 ? "Top-level chat" : $"Subagent {item.Depth}")
@@ -321,18 +392,23 @@ public partial class MainWindow : Window
             var indent = item.Depth == 0 ? "●" : new string('·', Math.Min(item.Depth, 3));
             var hasTotal = item.Latest?.HasSessionTotal == true;
             var total = item.Latest?.SessionTotal ?? TokenBreakdown.Empty;
-            _threadItems.Add(new ThreadDisplayItem(
+            var values = new ThreadRowValues(
                 indent,
                 name,
                 FormatContext(item.Analysis),
                 ZoneName(item.Analysis.Zone),
-                FormatMeasuredTokens(total.InputTokens, hasTotal),
-                FormatMeasuredTokens(total.CachedInputTokens, hasTotal),
-                FormatMeasuredTokens(total.OutputTokens, hasTotal),
-                FormatMeasuredTokens(total.ReasoningOutputTokens, hasTotal),
-                FormatMeasuredTokens(total.TotalTokens, hasTotal)));
-        }
+                FormatMeasuredTokens(total.InputTokens, hasTotal && total.Reports(TokenFields.Input)),
+                FormatMeasuredTokens(total.CachedInputTokens, hasTotal && total.Reports(TokenFields.CachedInput)),
+                FormatMeasuredTokens(total.OutputTokens, hasTotal && total.Reports(TokenFields.Output)),
+                FormatMeasuredTokens(total.ReasoningOutputTokens, hasTotal && total.Reports(TokenFields.Reasoning)),
+                FormatMeasuredTokens(total.TotalTokens, hasTotal));
+            return (item.Thread.Id, values);
+        }), static (id, values) => new ThreadDisplayItem(id, values));
+        UpdateThreadStatus();
     }
+
+    private void UpdateThreadStatus() =>
+        ThreadStatusLabel.Visibility = _threadItems.Count == 0 ? Visibility.Visible : Visibility.Collapsed;
 
     private void UpdateRecentList(HudSnapshot snapshot)
     {
@@ -373,46 +449,86 @@ public partial class MainWindow : Window
 
     private void UpdateChatList(HudSnapshot snapshot)
     {
-        var selectedId = (ChatList.SelectedItem as ChatListItem)?.Id;
         var usageById = snapshot.RecentChats.ToDictionary(chat => chat.Root.Id, StringComparer.Ordinal);
-        _chatItems.Clear();
-
-        if (!string.IsNullOrWhiteSpace(SearchBox.Text))
+        if (snapshot.Tracked is { } tracked)
         {
-            foreach (var chat in snapshot.SearchableChats)
+            usageById[tracked.Root.Id] = tracked;
+        }
+
+        ReconcileRows(ChatList, _chatItems, snapshot.SearchableChats
+            .Where(chat => _settings.ShowArchived || !chat.Archived)
+            .Select(chat =>
             {
                 usageById.TryGetValue(chat.Id, out var usage);
-                var context = FormatContext(usage?.Analysis);
                 var zone = usage?.Analysis.Zone ?? BudgetZone.Unavailable;
-                _chatItems.Add(new ChatListItem(
-                    chat.Id,
+                var values = new ChatRowValues(
                     DisplayTitle(chat),
                     chat.Archived ? "Archived" : $"Updated {chat.UpdatedAt.LocalDateTime:g}",
-                    context,
+                    FormatContext(usage?.Analysis),
                     usage is null ? "Not sampled" : ZoneName(zone),
-                    usage is null ? FindBrush("MutedBrush") : FindBrush(ZoneBrushName(zone)),
+                    FindBrush(ZoneBrushName(zone)),
                     chat.Archived,
-                    chat.Id == _settings.PinnedThreadId));
-            }
-        }
-        else
+                    IsPinnedChat(chat.Id, snapshot.Tracked));
+                return (chat.Id, values);
+            }), static (id, values) => new ChatListItem(id, values));
+
+        var selectedId = _selectedThreadId ?? snapshot.Tracked?.Root.Id;
+        ChatList.SelectedItem = _chatItems.FirstOrDefault(item => item.Id == selectedId);
+        BrowserEmptyLabel.Visibility = _chatItems.Count == 0 ? Visibility.Visible : Visibility.Collapsed;
+        BrowserEmptyLabel.Text = string.IsNullOrWhiteSpace(SearchBox.Text) ? "No chats available" : "No matching chats";
+    }
+
+    private static void ReconcileRows<TItem, TValues>(
+        ItemsControl control,
+        ObservableCollection<TItem> items,
+        IEnumerable<(string Id, TValues Values)> rows,
+        Func<string, TValues, TItem> create)
+        where TItem : DisplayRow<TValues>
+    {
+        var desiredRows = rows.ToArray();
+        var desiredIds = desiredRows.Select(row => row.Id).ToHashSet(StringComparer.Ordinal);
+        var focusedElement = Keyboard.FocusedElement as DependencyObject;
+        var focusedContainer = focusedElement is null ? null : ItemsControl.ContainerFromElement(control, focusedElement);
+        var focusedRow = focusedContainer is null ? null : control.ItemContainerGenerator.ItemFromContainer(focusedContainer) as TItem;
+        var needsFocusRestore = false;
+
+        for (var index = items.Count - 1; index >= 0; index--)
         {
-            foreach (var chat in snapshot.RecentChats)
+            if (!desiredIds.Contains(items[index].Id))
             {
-                _chatItems.Add(new ChatListItem(
-                    chat.Root.Id,
-                    DisplayTitle(chat.Root),
-                    ZoneName(chat.Analysis.Zone),
-                    FormatContext(chat.Analysis),
-                    ZoneName(chat.Analysis.Zone),
-                    FindBrush(ZoneBrushName(chat.Analysis.Zone)),
-                    chat.Root.Archived,
-                    chat.Root.Id == _settings.PinnedThreadId));
+                items.RemoveAt(index);
             }
         }
 
-        ChatList.SelectedItem = _chatItems.FirstOrDefault(item => item.Id == snapshot.Tracked?.Root.Id)
-            ?? _chatItems.FirstOrDefault(item => item.Id == selectedId);
+        var existingRows = items.ToDictionary(item => item.Id, StringComparer.Ordinal);
+        for (var index = 0; index < desiredRows.Length; index++)
+        {
+            var (id, values) = desiredRows[index];
+            if (!existingRows.TryGetValue(id, out var item))
+            {
+                items.Insert(index, create(id, values));
+                continue;
+            }
+
+            item.Update(values);
+            var previousIndex = items.IndexOf(item);
+            if (previousIndex != index)
+            {
+                items.Move(previousIndex, index);
+                needsFocusRestore |= ReferenceEquals(item, focusedRow);
+            }
+        }
+
+        if (needsFocusRestore && focusedRow is not null)
+        {
+            control.Dispatcher.BeginInvoke(DispatcherPriority.Loaded, () =>
+            {
+                if (Keyboard.FocusedElement is null || Keyboard.FocusedElement == control)
+                {
+                    (control.ItemContainerGenerator.ContainerFromItem(focusedRow) as UIElement)?.Focus();
+                }
+            });
+        }
     }
 
     private void UpdateQuota(AccountQuota? quota)
@@ -429,6 +545,9 @@ public partial class MainWindow : Window
             FormatQuotaReset("Weekly", weekly),
         });
         AutomationProperties.SetName(QuotaSummaryLabel, $"Account quota. Five-hour {fiveHourText}. Weekly {weeklyText}.");
+        ExpandedQuotaLabel.Text = $"Five-hour {fiveHourText}   ·   Weekly {weeklyText}";
+        ExpandedQuotaLabel.ToolTip = QuotaSummaryLabel.ToolTip;
+        AutomationProperties.SetName(ExpandedQuotaLabel, AutomationProperties.GetName(QuotaSummaryLabel));
     }
 
     private static string FormatQuotaReset(string name, RateLimitWindow? window)
@@ -575,8 +694,8 @@ public partial class MainWindow : Window
                 CompactPanel.Visibility = Visibility.Collapsed;
                 ExpandedPanel.Visibility = Visibility.Visible;
                 StatusBar.Visibility = Visibility.Visible;
-                MinWidth = 720;
-                MinHeight = 680;
+                MinWidth = 480;
+                MinHeight = 400;
                 Width = Math.Max(_settings.ExpandedWidth, MinWidth);
                 Height = Math.Max(_settings.ExpandedHeight, MinHeight);
                 ExpandButton.ToolTip = "Show compact view";
@@ -586,6 +705,7 @@ public partial class MainWindow : Window
             {
                 CompactPanel.Visibility = Visibility.Visible;
                 ExpandedPanel.Visibility = Visibility.Collapsed;
+                SettingsPopup.IsOpen = false;
                 StatusBar.Visibility = Visibility.Collapsed;
                 MinWidth = 360;
                 MinHeight = 360;
@@ -615,12 +735,12 @@ public partial class MainWindow : Window
             _settings.CompactHeight = 390;
         }
 
-        if (!double.IsFinite(_settings.ExpandedWidth) || _settings.ExpandedWidth is < 720 or > 1_800)
+        if (!double.IsFinite(_settings.ExpandedWidth) || _settings.ExpandedWidth is < 480 or > 1_800)
         {
             _settings.ExpandedWidth = 860;
         }
 
-        if (!double.IsFinite(_settings.ExpandedHeight) || _settings.ExpandedHeight is < 680 or > 1_200)
+        if (!double.IsFinite(_settings.ExpandedHeight) || _settings.ExpandedHeight is < 400 or > 1_200)
         {
             _settings.ExpandedHeight = 720;
         }
@@ -628,14 +748,50 @@ public partial class MainWindow : Window
 
     private void EnsureWithinWorkArea()
     {
-        if (double.IsNaN(Left) || double.IsNaN(Top))
+        var handle = new WindowInteropHelper(this).Handle;
+        if (_demo || handle == 0 || !GetWindowRect(handle, out var bounds))
         {
             return;
         }
 
-        var workArea = SystemParameters.WorkArea;
-        Left = Math.Clamp(Left, workArea.Left, Math.Max(workArea.Left, workArea.Right - Width));
-        Top = Math.Clamp(Top, workArea.Top, Math.Max(workArea.Top, workArea.Bottom - Height));
+        var workArea = System.Windows.Forms.Screen.FromHandle(handle).WorkingArea;
+        var dpi = VisualTreeHelper.GetDpi(this);
+        var width = Math.Min(workArea.Width, bounds.Right - bounds.Left);
+        var height = Math.Min(workArea.Height, bounds.Bottom - bounds.Top);
+        var left = Math.Clamp(bounds.Left, workArea.Left, workArea.Right - width);
+        var top = Math.Clamp(bounds.Top, workArea.Top, workArea.Bottom - height);
+        MinWidth = Math.Min(_settings.Expanded ? 480 : 360, workArea.Width / dpi.DpiScaleX);
+        MinHeight = Math.Min(_settings.Expanded ? 400 : 360, workArea.Height / dpi.DpiScaleY);
+        if (left != bounds.Left || top != bounds.Top || width != bounds.Right - bounds.Left || height != bounds.Bottom - bounds.Top)
+        {
+            const uint noZOrderOrActivation = 0x0014;
+            _ = SetWindowPos(handle, 0, left, top, width, height, noZOrderOrActivation);
+        }
+    }
+
+    private void ExpandedPanel_SizeChanged(object sender, SizeChangedEventArgs e) => UpdateInspectorLayout();
+
+    private void BrowserToggleButton_Click(object sender, RoutedEventArgs e)
+    {
+        _showChatBrowser = !_showChatBrowser;
+        UpdateInspectorLayout();
+        if (_showChatBrowser)
+        {
+            SearchBox.Focus();
+        }
+    }
+
+    private void UpdateInspectorLayout()
+    {
+        var narrow = ExpandedPanel.ActualWidth is > 0 and < 650;
+        BrowserToggleButton.Visibility = narrow ? Visibility.Visible : Visibility.Collapsed;
+        BrowserToggleButton.Content = _showChatBrowser ? "Show details" : "Browse chats";
+        BrowserPanel.Visibility = !narrow || _showChatBrowser ? Visibility.Visible : Visibility.Collapsed;
+        DetailPanel.Visibility = !narrow || !_showChatBrowser ? Visibility.Visible : Visibility.Collapsed;
+        BrowserColumn.Width = narrow
+            ? new GridLength(_showChatBrowser ? 1 : 0, GridUnitType.Star)
+            : new GridLength(245);
+        BrowserGapColumn.Width = new GridLength(narrow ? 0 : 12);
     }
 
     private void ToggleExpanded()
@@ -703,14 +859,29 @@ public partial class MainWindow : Window
 
     private void PinButton_Click(object sender, RoutedEventArgs e)
     {
-        if (_snapshot?.Tracked is null)
+        var tracked = _snapshot?.Tracked;
+        var target = _selectedThreadId ?? tracked?.Root.Id;
+        if (target is null)
         {
             return;
         }
 
-        _settings.PinnedThreadId = _settings.PinnedThreadId is null ? _snapshot.Tracked.Root.Id : null;
-        _monitor?.RequestRefresh();
+        _settings.PinnedThreadId = IsPinnedChat(target, tracked) ? null : target;
+        _selectedThreadId = null;
+        RefreshInspection();
         ScheduleSave();
+    }
+
+    private void FollowLatestButton_Click(object sender, RoutedEventArgs e)
+    {
+        var hadPin = _settings.PinnedThreadId is not null;
+        _settings.PinnedThreadId = null;
+        _selectedThreadId = null;
+        RefreshInspection();
+        if (hadPin)
+        {
+            ScheduleSave();
+        }
     }
 
     private void PrivacyButton_Click(object sender, RoutedEventArgs e) => TogglePrivacy();
@@ -761,20 +932,24 @@ public partial class MainWindow : Window
         }
 
         _settings.ShowArchived = ArchivedCheckBox.IsChecked == true;
-        _monitor?.RequestRefresh();
+        if (!_demo && _snapshot is not null && !_settings.ShowArchived)
+        {
+            UpdateSnapshot(_snapshot);
+        }
+
+        RefreshNavigation();
         ScheduleSave();
     }
 
     private void ChatList_SelectionChanged(object sender, System.Windows.Controls.SelectionChangedEventArgs e)
     {
-        if (_updatingUi || ChatList.SelectedItem is not ChatListItem selected || selected.Id == _snapshot?.Tracked?.Root.Id)
+        if (_updatingUi || ChatList.SelectedItem is not ChatListItem selected)
         {
             return;
         }
 
-        _settings.PinnedThreadId = selected.Id;
-        _monitor?.RequestRefresh();
-        ScheduleSave();
+        _selectedThreadId = selected.Id;
+        RefreshInspection();
     }
 
     private void RecentChatButton_Click(object sender, RoutedEventArgs e)
@@ -784,19 +959,48 @@ public partial class MainWindow : Window
             return;
         }
 
-        _settings.PinnedThreadId = threadId;
+        _selectedThreadId = threadId;
+        _showChatBrowser = false;
+        if (!_settings.Expanded)
+        {
+            RememberCurrentSize();
+        }
+
         _settings.Expanded = true;
         ApplyViewMode();
-        _monitor?.RequestRefresh();
+        UpdateInspectorLayout();
+        RefreshInspection();
         ScheduleSave();
     }
 
     private void SettingsButton_Click(object sender, RoutedEventArgs e) =>
         SettingsPopup.IsOpen = !SettingsPopup.IsOpen;
 
+    private void CloseSettingsButton_Click(object sender, RoutedEventArgs e) => SettingsPopup.IsOpen = false;
+
+    private void SettingsPopup_Opened(object? sender, EventArgs e) =>
+        _ = Dispatcher.InvokeAsync(() => BudgetBox.Focus(), DispatcherPriority.Input);
+
+    private void SettingsPopup_Closed(object? sender, EventArgs e)
+    {
+        if (ExpandedPanel.IsVisible && IsActive)
+        {
+            SettingsButton.Focus();
+        }
+    }
+
+    private void SettingsSurface_PreviewKeyDown(object sender, System.Windows.Input.KeyEventArgs e)
+    {
+        if (e.Key == Key.Escape)
+        {
+            e.Handled = true;
+            SettingsPopup.IsOpen = false;
+        }
+    }
+
     private void SearchBox_TextChanged(object sender, System.Windows.Controls.TextChangedEventArgs e)
     {
-        if (_updatingUi || _monitor is null)
+        if (_updatingUi)
         {
             return;
         }
@@ -809,7 +1013,7 @@ public partial class MainWindow : Window
     private void SearchTimer_Tick(object? sender, EventArgs e)
     {
         _searchTimer.Stop();
-        _monitor?.RequestRefresh();
+        RefreshNavigation();
     }
 
     private void BudgetBox_KeyDown(object sender, System.Windows.Input.KeyEventArgs e)
@@ -1012,9 +1216,25 @@ public partial class MainWindow : Window
     private void Window_SourceInitialized(object? sender, EventArgs e)
     {
         var handle = new WindowInteropHelper(this).Handle;
+        HwndSource.FromHwnd(handle)?.AddHook(HandleWindowMessage);
         var corner = 2;
         _ = DwmSetWindowAttribute(handle, 33, ref corner, sizeof(int));
         ApplyDarkWindowFrame(handle);
+        _ = Dispatcher.InvokeAsync(EnsureWithinWorkArea, DispatcherPriority.Loaded);
+    }
+
+    private nint HandleWindowMessage(nint window, int message, nint first, nint second, ref bool handled)
+    {
+        const int displayChange = 0x007E;
+        const int settingChange = 0x001A;
+        const int exitSizeMove = 0x0232;
+        const int setWorkArea = 0x002F;
+        if (message is exitSizeMove or displayChange || message == settingChange && first == setWorkArea)
+        {
+            _ = Dispatcher.InvokeAsync(EnsureWithinWorkArea, DispatcherPriority.Loaded);
+        }
+
+        return 0;
     }
 
     private void ApplyDarkWindowFrame(nint handle)
@@ -1111,6 +1331,23 @@ public partial class MainWindow : Window
 
     [DllImport("dwmapi.dll")]
     private static extern int DwmSetWindowAttribute(nint hwnd, int attribute, ref int value, int valueSize);
+
+    [StructLayout(LayoutKind.Sequential)]
+    private struct WindowBounds
+    {
+        public int Left;
+        public int Top;
+        public int Right;
+        public int Bottom;
+    }
+
+    [DllImport("user32.dll")]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    private static extern bool GetWindowRect(nint window, out WindowBounds bounds);
+
+    [DllImport("user32.dll")]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    private static extern bool SetWindowPos(nint window, nint insertAfter, int x, int y, int width, int height, uint flags);
 
     private enum AlertState
     {
