@@ -4,7 +4,7 @@ namespace TokenHud.App;
 
 internal static class DemoData
 {
-    public static HudSnapshot Create()
+    public static HudSnapshot Create(string? trackedThreadId = null, bool includeArchived = false, string? search = null)
     {
         var now = DateTimeOffset.Now;
         var quota = new AccountQuota(
@@ -22,10 +22,17 @@ internal static class DemoData
             CreateChat("019f-demo-6", "Prepare release notes", 97_600, now.AddHours(-1), quota),
         };
 
+        var archived = CreateChat("019f-demo-archive", "Archive the release checklist", 72_000, now.AddDays(-2), quota, archived: true);
+        var catalog = includeArchived ? recent.Append(archived) : recent.AsEnumerable();
+        var query = search?.Trim() ?? string.Empty;
         return new HudSnapshot(
-            recent[0],
+            recent.Append(archived).FirstOrDefault(chat => chat.Root.Id == trackedThreadId) ?? recent[0],
             recent,
-            recent.Select(chat => chat.Root).ToArray(),
+            catalog.Select(chat => chat.Root)
+                .Where(root => root.Title.Contains(query, StringComparison.OrdinalIgnoreCase) ||
+                    root.Id.Contains(query, StringComparison.OrdinalIgnoreCase) ||
+                    root.Cwd.Contains(query, StringComparison.OrdinalIgnoreCase))
+                .ToArray(),
             quota,
             now,
             true,
@@ -38,7 +45,8 @@ internal static class DemoData
         string title,
         long contextLoad,
         DateTimeOffset updatedAt,
-        AccountQuota quota)
+        AccountQuota quota,
+        bool archived = false)
     {
         var root = new ThreadRecord(
             id,
@@ -48,7 +56,7 @@ internal static class DemoData
             @"C:\work\atlas",
             title,
             contextLoad * 4,
-            false,
+            archived,
             "gpt-5.6",
             "high",
             null,

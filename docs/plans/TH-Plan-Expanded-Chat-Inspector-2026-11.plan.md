@@ -1,11 +1,13 @@
 ---
 title: Plan - Feature: Expanded Chat Inspector
 ticket: https://app.notion.com/p/TH-Plan-Feature-Expanded-Chat-Inspector-4220b9c6786f8147bfb4f48ac8290f48
-status: planned
+status: in-progress
 appetite: L
 impact: minor
 devTicketKey: TH:TH-Plan-Expanded-Chat-Inspector-2026-11
 agent: Codex
+branch: codex/tokenhud-expanded-inspector
+worktree: TokenHUD
 ---
 # Expanded Chat Inspector
 

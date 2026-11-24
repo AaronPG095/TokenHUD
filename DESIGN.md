@@ -45,7 +45,7 @@ Windows High Contrast uses `Window` for surfaces, `WindowText` for copy, divider
 ## Geometry and spacing
 
 - Compact window: 392 × 390 logical pixels; minimum 360 × 360.
-- Expanded window: 860 × 720 logical pixels; minimum 720 × 680.
+- Expanded window: 860 × 720 logical pixels; minimum 480 × 400 before work-area constraints.
 - Base spacing: 4px; common gaps 8, 12, 16, and 24px.
 - Outer inset: 16px compact, 20px expanded.
 - Corners: 10px for major surfaces, 6px for controls, fully round only for status dots.
@@ -76,8 +76,8 @@ Account Quota uses one footer line: `Account quota  5h —  ·  Weekly 68% left`
 
 ## Expanded view
 
-- Left: search, recent unarchived top-level chats, archived filter, pin affordance.
-- Right: selected chat Context Load, velocity/spike detail, per-thread Context Load, quotas, and source health.
+- The wide view pairs a searchable chat browser with the inspector. On narrow windows, Browse chats and Show details switch between the panels.
+- The inspector starts with Context Load, followed by latest-exchange Token Flow, per-thread readings, Account Quota, and source health. Selecting a chat is temporary. Pin Chat persists it, and Follow latest restores automatic tracking.
 - Session Consumption and Highest Child do not appear in Expanded View.
 - The selected chat should explain both token traffic and broad context origin without combining them into a misleading total. Codex provides exact Input, Cached Input, Cache Write, Output, and Reasoning counts; Cached Input is part of Input, and Reasoning is part of Output. A broad origin view should distinguish instruction-like input (including rules) from working history without exposing individual rule or message names. Source attribution is not provided by Codex and must be labelled as estimated if derived locally.
 - Use two compact visuals. The primary Context bar shows exact current Context Load against the 150,000-token budget and divides it into estimated Instructions and Working Context. A secondary Token Flow view shows exact latest-exchange Input split into Cached, Cache Write, and New, plus Output split into Reasoning and Visible. Lifetime totals remain available through tooltips rather than persistent panels.

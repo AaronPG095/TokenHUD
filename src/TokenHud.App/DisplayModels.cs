@@ -30,17 +30,59 @@ internal sealed class RecentChatDisplayItem(string id) : INotifyPropertyChanged
     }
 }
 
-internal sealed record ChatListItem(
-    string Id,
+internal abstract class DisplayRow<T>(string id, T values) : INotifyPropertyChanged
+{
+    public string Id { get; } = id;
+    protected T Values { get; private set; } = values;
+
+    public event PropertyChangedEventHandler? PropertyChanged;
+
+    public void Update(T next)
+    {
+        if (EqualityComparer<T>.Default.Equals(Values, next))
+        {
+            return;
+        }
+
+        Values = next;
+        PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(string.Empty));
+    }
+}
+
+internal sealed class ChatListItem(string id, ChatRowValues values) : DisplayRow<ChatRowValues>(id, values)
+{
+    public string Title => Values.Title;
+    public string Meta => Values.Meta;
+    public string Context => Values.Context;
+    public string Zone => Values.Zone;
+    public Brush ZoneBrush => Values.ZoneBrush;
+    public bool Archived => Values.Archived;
+    public bool Pinned => Values.Pinned;
+}
+
+internal sealed record ChatRowValues(
     string Title,
     string Meta,
     string Context,
     string Zone,
-    System.Windows.Media.Brush ZoneBrush,
+    Brush ZoneBrush,
     bool Archived,
     bool Pinned);
 
-internal sealed record ThreadDisplayItem(
+internal sealed class ThreadDisplayItem(string id, ThreadRowValues values) : DisplayRow<ThreadRowValues>(id, values)
+{
+    public string Marker => Values.Marker;
+    public string Name => Values.Name;
+    public string Context => Values.Context;
+    public string Zone => Values.Zone;
+    public string Input => Values.Input;
+    public string Cached => Values.Cached;
+    public string Output => Values.Output;
+    public string Reasoning => Values.Reasoning;
+    public string Total => Values.Total;
+}
+
+internal sealed record ThreadRowValues(
     string Marker,
     string Name,
     string Context,
