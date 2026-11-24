@@ -32,7 +32,8 @@ public partial class App : System.Windows.Application
             ? new HudSettings { NotificationsEnabled = false, StartWithWindows = false }
             : settingsStore.LoadAsync().GetAwaiter().GetResult();
         var diagnostics = new RollingDiagnostics(appData);
-        var window = new MainWindow(settings, settingsStore, diagnostics, _theme, demo);
+        var history = demo ? null : new MetricsHistoryStore(appData.MetricsHistory);
+        var window = new MainWindow(settings, settingsStore, diagnostics, _theme, demo, history);
         MainWindow = window;
         _singleInstance?.StartListening(() => Dispatcher.Invoke(window.ShowFromTray));
         window.Show();

@@ -1,11 +1,13 @@
 ---
 title: Plan - Feature: Local Metrics History
 ticket: https://app.notion.com/p/TH-Plan-Feature-Local-Metrics-History-4220b9c6786f81229ea9c86bb5040ef4
-status: planned
+status: in-progress
 appetite: L
 impact: minor
 devTicketKey: TH:TH-Plan-Local-Metrics-History-2026-11
 agent: Codex
+branch: codex/tokenhud-local-metrics-history
+worktree: TokenHUD
 ---
 # Local Metrics History
 
@@ -25,17 +27,17 @@ None
 
 ## Acceptance criteria
 
-- [ ] AC1: A per-user local store records measured Context Load with opaque identifiers and zones, deduplicates unchanged samples, and handles missing measurements without introducing synthetic zeros.
-- [ ] AC2: Settings offer the five retention choices and a separately confirmed clear operation. Expanded shows a compact trend for the selected chat with accessible text and safe empty, disabled, and error states.
-- [ ] AC3: Privacy Mode hides names and paths in both views, search, tooltips, automation names and alert copy. History stores no names, paths, prompts, or transcripts.
-- [ ] AC4: Windows build and self-tests pass. Deterministic storage fixtures cover duplicate writes, retention and erase, and a synthetic WPF run exercises the selected history and privacy workflow.
+- [x] AC1: A per-user local store records measured Context Load with opaque identifiers and zones, deduplicates unchanged samples, and handles missing measurements without introducing synthetic zeros. verified: Deterministic SQLite fixture checked repeated measurements, measured zero, unavailable readings, opaque keys and post-clear cutoff.
+- [x] AC2: Settings offer the five retention choices and a separately confirmed clear operation. Expanded shows a compact trend for the selected chat with accessible text and safe empty, disabled, and error states. verified: Synthetic WPF showed five choices, Off and a numeric chart summary; inspected the explicit clear confirmation and verified store erase.
+- [x] AC3: Privacy Mode hides names and paths in both views, search, tooltips, automation names and alert copy. History stores no names, paths, prompts, or transcripts. verified: Synthetic WPF removed names and search text, earlier Compact tests covered tooltips and UI Automation, and store fixture verified hashed identity.
+- [x] AC4: Windows build and self-tests pass. Deterministic storage fixtures cover duplicate writes, retention and erase, and a synthetic WPF run exercises the selected history and privacy workflow. verified: Clean Windows build, all 13 self-tests including live checks, plus the synthetic privacy and retention workflow.
 
 ## Steps
 
-- [ ] Implement and verify the local metrics-only store (AC1).
-- [ ] Connect retention, confirmed clear, and Expanded trend presentation (AC2).
-- [ ] Verify Privacy Mode through search, text, accessibility and persisted history (AC3).
-- [ ] Run storage, Windows and synthetic workflow verification (AC4).
+- [x] Implement and verify the local metrics-only store (AC1). verified: SQLite fixture passed for deduplication, retention and erase.
+- [x] Connect retention, confirmed clear, and Expanded trend presentation (AC2). verified: WPF settings and chart states passed, and SQLite cutoff prevented reappearing samples.
+- [x] Verify Privacy Mode through search, text, accessibility and persisted history (AC3). verified: WPF privacy behavior and SQLite opaque keys passed; alert copy gating remains in the reviewed implementation.
+- [x] Run storage, Windows and synthetic workflow verification (AC4). verified: Windows build and synthetic WPF history workflow passed.
 
 ## Risks
 

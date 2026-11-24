@@ -135,7 +135,10 @@ public sealed record UsageSnapshot(
     long? ModelContextWindow,
     AccountQuota? Quota,
     bool HasContext = true,
-    bool HasSessionTotal = true);
+    bool HasSessionTotal = true)
+{
+    public DateTimeOffset ContextObservedAt { get; init; } = Timestamp;
+}
 
 public sealed record ThreadRecord(
     string Id,

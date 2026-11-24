@@ -332,6 +332,34 @@
                                     </DataGrid.Columns>
                                 </DataGrid>
 
+                                <TextBlock Text="Metrics History" FontSize="13" FontWeight="SemiBold" Margin="0,16,0,0" />
+                                <TextBlock x:Name="HistoryStatusLabel" Text="No recent Context Load readings"
+                                           Style="{StaticResource MutedText}" TextWrapping="Wrap" Margin="0,3,0,0"
+                                           automation:AutomationProperties.LiveSetting="Polite" />
+                                <ItemsControl x:Name="HistoryChart" Height="37" MaxWidth="480" Margin="0,7,0,0"
+                                              HorizontalAlignment="Left" HorizontalContentAlignment="Stretch" Visibility="Collapsed"
+                                              automation:AutomationProperties.Name="Recent Context Load readings">
+                                    <ItemsControl.Template>
+                                        <ControlTemplate TargetType="ItemsControl">
+                                            <Border BorderBrush="{DynamicResource DividerBrush}" BorderThickness="0,0,0,1">
+                                                <ItemsPresenter />
+                                            </Border>
+                                        </ControlTemplate>
+                                    </ItemsControl.Template>
+                                    <ItemsControl.ItemsPanel>
+                                        <ItemsPanelTemplate>
+                                            <UniformGrid Rows="1" />
+                                        </ItemsPanelTemplate>
+                                    </ItemsControl.ItemsPanel>
+                                    <ItemsControl.ItemTemplate>
+                                        <DataTemplate>
+                                            <Border Height="{Binding Height}" MinHeight="1" MaxHeight="36" Width="9"
+                                                    Margin="1,0" CornerRadius="2,2,0,0" VerticalAlignment="Bottom"
+                                                    Background="{DynamicResource PrimaryBrush}" ToolTip="{Binding Description}" />
+                                        </DataTemplate>
+                                    </ItemsControl.ItemTemplate>
+                                </ItemsControl>
+
                                 <Border BorderBrush="{DynamicResource DividerBrush}" BorderThickness="0,1,0,0"
                                         Margin="0,16,0,0" Padding="0,12,0,0">
                                     <StackPanel>
@@ -431,6 +459,26 @@
                         </StackPanel>
                         <Button x:Name="PauseButton" Content="Pause monitoring" Style="{StaticResource QuietButton}"
                                 Margin="0,12,0,0" HorizontalAlignment="Left" Click="PauseButton_Click" />
+                        <TextBlock Text="Metrics History" FontSize="12" FontWeight="SemiBold" Margin="0,14,0,4" />
+                        <DockPanel LastChildFill="True">
+                            <Label Content="_Retention" Target="{Binding ElementName=HistoryRetentionComboBox}"
+                                   Padding="0" VerticalAlignment="Center" FontSize="12" />
+                            <ComboBox x:Name="HistoryRetentionComboBox" Width="126" HorizontalAlignment="Right"
+                                      SelectionChanged="HistoryRetentionComboBox_SelectionChanged" SelectedValuePath="Tag"
+                                      Background="{DynamicResource CanvasBrush}" Foreground="{DynamicResource InkBrush}"
+                                      BorderBrush="{DynamicResource PrimaryBrush}"
+                                      automation:AutomationProperties.Name="Metrics History retention">
+                                <ComboBoxItem Content="Off" Tag="Off" />
+                                <ComboBoxItem Content="7 days" Tag="Days7" />
+                                <ComboBoxItem Content="30 days" Tag="Days30" />
+                                <ComboBoxItem Content="90 days" Tag="Days90" />
+                                <ComboBoxItem Content="Indefinite" Tag="Indefinite" />
+                            </ComboBox>
+                        </DockPanel>
+                        <Button x:Name="ClearHistoryButton" Content="Clear Metrics History" Style="{StaticResource QuietButton}"
+                                Margin="0,7,0,0" HorizontalAlignment="Left" Click="ClearHistoryButton_Click" />
+                        <TextBlock x:Name="HistorySettingsStatusLabel" Style="{StaticResource MutedText}" TextWrapping="Wrap"
+                                   automation:AutomationProperties.LiveSetting="Polite" />
                     </StackPanel>
                     </ScrollViewer>
                 </Border>
