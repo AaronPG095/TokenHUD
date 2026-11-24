@@ -178,7 +178,10 @@ public sealed record ThreadBreakdown(
     ThreadRecord Thread,
     UsageSnapshot? Latest,
     ContextAnalysis Analysis,
-    int Depth);
+    int Depth)
+{
+    public ResolvedContextBudget Budget { get; init; } = ResolvedContextBudget.Default;
+}
 
 public sealed record ChatUsage(
     ThreadRecord Root,
@@ -187,7 +190,10 @@ public sealed record ChatUsage(
     TokenBreakdown TreeConsumption,
     IReadOnlyList<ThreadBreakdown> Threads,
     ThreadBreakdown? HighestChild,
-    DateTimeOffset LastObservedActivity);
+    DateTimeOffset LastObservedActivity)
+{
+    public ResolvedContextBudget Budget { get; init; } = ResolvedContextBudget.Default;
+}
 
 public sealed record HudSnapshot(
     ChatUsage? Tracked,

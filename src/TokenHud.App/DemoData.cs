@@ -4,7 +4,8 @@ namespace TokenHud.App;
 
 internal static class DemoData
 {
-    public static HudSnapshot Create(string? trackedThreadId = null, bool includeArchived = false, string? search = null)
+    public static HudSnapshot Create(string? trackedThreadId = null, bool includeArchived = false, string? search = null,
+        long installationBudget = 150_000, ContextBudgetProfiles? profiles = null)
     {
         var now = DateTimeOffset.Now;
         var quota = new AccountQuota(
@@ -23,6 +24,16 @@ internal static class DemoData
         };
 
         var archived = CreateChat("019f-demo-archive", "Archive the release checklist", 72_000, now.AddDays(-2), quota, archived: true);
+        profiles ??= new ContextBudgetProfiles();
+        recent = recent.Select(ApplyBudget).ToArray();
+        archived = ApplyBudget(archived);
+
+        ChatUsage ApplyBudget(ChatUsage chat)
+        {
+            var budget = profiles.Resolve(installationBudget, chat.Root.Id, chat.Latest?.ModelContextWindow);
+            var analysis = BudgetAnalyzer.Analyze([chat.Latest!], new BudgetPolicy(budget.EffectiveTokens));
+            return chat with { Budget = budget, Analysis = analysis, Threads = [chat.Threads[0] with { Budget = budget, Analysis = analysis }] };
+        }
         var catalog = includeArchived ? recent.Append(archived) : recent.AsEnumerable();
         var query = search?.Trim() ?? string.Empty;
         return new HudSnapshot(
