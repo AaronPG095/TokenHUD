@@ -960,6 +960,7 @@ public partial class MainWindow : Window
         }
 
         _selectedThreadId = threadId;
+        _showChatBrowser = false;
         if (!_settings.Expanded)
         {
             RememberCurrentSize();
@@ -967,6 +968,7 @@ public partial class MainWindow : Window
 
         _settings.Expanded = true;
         ApplyViewMode();
+        UpdateInspectorLayout();
         RefreshInspection();
         ScheduleSave();
     }
@@ -1214,10 +1216,25 @@ public partial class MainWindow : Window
     private void Window_SourceInitialized(object? sender, EventArgs e)
     {
         var handle = new WindowInteropHelper(this).Handle;
+        HwndSource.FromHwnd(handle)?.AddHook(HandleWindowMessage);
         var corner = 2;
         _ = DwmSetWindowAttribute(handle, 33, ref corner, sizeof(int));
         ApplyDarkWindowFrame(handle);
         _ = Dispatcher.InvokeAsync(EnsureWithinWorkArea, DispatcherPriority.Loaded);
+    }
+
+    private nint HandleWindowMessage(nint window, int message, nint first, nint second, ref bool handled)
+    {
+        const int displayChange = 0x007E;
+        const int settingChange = 0x001A;
+        const int exitSizeMove = 0x0232;
+        const int setWorkArea = 0x002F;
+        if (message is exitSizeMove or displayChange || message == settingChange && first == setWorkArea)
+        {
+            _ = Dispatcher.InvokeAsync(EnsureWithinWorkArea, DispatcherPriority.Loaded);
+        }
+
+        return 0;
     }
 
     private void ApplyDarkWindowFrame(nint handle)
