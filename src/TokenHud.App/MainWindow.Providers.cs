@@ -116,9 +116,8 @@ public partial class MainWindow
         var ratio = context.UsedPercent is { } percent ? $" ({percent:0.#}%)" : string.Empty;
         if (context.Tokens is null)
         {
-            return context.UsedPercent is { } reported ? $"{reported:0.#}% used"
-                : context.CapacityTokens is { } capacityOnly ? $"usage unavailable · capacity {Metric(capacityOnly)} tokens"
-                : "unavailable";
+            var used = context.UsedPercent is { } reported ? $"{reported:0.#}% used" : "usage unavailable";
+            return context.CapacityTokens is { } capacityOnly ? $"{used} · capacity {Metric(capacityOnly)} tokens" : used;
         }
 
         return context.CapacityTokens is { } capacity

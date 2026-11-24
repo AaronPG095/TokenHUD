@@ -33,7 +33,7 @@ None
 - [x] AC1: The normalized local reading model identifies source and session independently, distinguishes live context, historical context, latest usage and quota, and preserves missing versus zero. verified: Fixtures verified provider and session identity, measured zero, partial exchange, historical context and typed quota.
 - [x] AC2: A bounded opt-in ingest path accepts typed JSON and writes only an allowlisted metrics record to local storage. Raw input, secrets, prompts and paths are excluded. Opaque keys, atomic replace and freshness validation are verified. verified: Verified oversize rejection, typed validation, opaque keys and atomic concurrent replace using temporary storage.
 - [x] AC3: Expanded shows connected sources, fresh readings, stale data and the verified coverage of each source while Codex keeps its existing Compact behavior. verified: WPF verified connected and stale source rows, missing readings and consumer feed limitations; local Codex smoke passed.
-- [x] AC4: The Windows solution and deterministic tests pass, with a synthetic WPF session exercising source status, a connected reading and qualified missing fields. verified: Clean Windows build, 13 of 13 integrated checks, and synthetic WPF actual provider panel load passed.
+- [x] AC4: The Windows solution and deterministic tests pass, with a synthetic WPF session exercising source status, a connected reading and qualified missing fields. verified: Clean rebased Windows build, 14 of 14 integrated checks, and synthetic WPF provider panel load.
 
 ## Steps
 
