@@ -42,6 +42,10 @@ public sealed class RollingDiagnostics
             var path = Path.Combine(_paths.Diagnostics, $"token-hud-{DateTime.UtcNow:yyyy-MM-dd}.jsonl");
             await File.AppendAllTextAsync(path, line, cancellationToken).ConfigureAwait(false);
         }
+        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
+        {
+            // Diagnostics must not prevent monitoring or settings recovery.
+        }
         finally
         {
             _gate.Release();
@@ -58,11 +62,11 @@ public sealed class RollingDiagnostics
 
         return string.Join(Environment.NewLine,
             $"Token HUD {version}",
-            $"Refreshed: {snapshot.RefreshedAt:O}",
-            $"State database available: {snapshot.StateDatabaseAvailable}",
-            $"Parsed rollouts: {snapshot.ParsedRolloutCount}",
-            $"Tracked context: {snapshot.Tracked?.Analysis.Load ?? 0}",
-            $"Tracked zone: {snapshot.Tracked?.Analysis.Zone.ToString() ?? "none"}");
+            $"Windows build: {Environment.OSVersion.Version.Build}",
+            $"Last successful refresh (UTC): {snapshot.RefreshedAt.UtcDateTime:O}",
+            $"Codex state database available: {snapshot.StateDatabaseAvailable}",
+            $"Recent chat count: {snapshot.RecentChats.Count}",
+            $"Readable rollout count: {snapshot.ParsedRolloutCount}");
     }
 
     private void Purge()

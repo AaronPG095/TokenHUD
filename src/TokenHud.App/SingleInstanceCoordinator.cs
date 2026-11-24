@@ -7,13 +7,30 @@ internal sealed class SingleInstanceCoordinator : IDisposable
     private readonly Mutex _mutex;
     private readonly EventWaitHandle _showEvent;
     private volatile bool _stopping;
+    private bool _disposed;
     private Task? _listener;
 
     public SingleInstanceCoordinator()
     {
-        _mutex = new Mutex(initiallyOwned: true, MutexName, out var createdNew);
-        IsPrimary = createdNew;
-        _showEvent = new EventWaitHandle(false, EventResetMode.AutoReset, EventName);
+        _mutex = new Mutex(initiallyOwned: false, MutexName);
+        try
+        {
+            _showEvent = new EventWaitHandle(false, EventResetMode.AutoReset, EventName);
+        }
+        catch
+        {
+            _mutex.Dispose();
+            throw;
+        }
+
+        try
+        {
+            IsPrimary = _mutex.WaitOne(0);
+        }
+        catch (AbandonedMutexException)
+        {
+            IsPrimary = true;
+        }
     }
 
     public bool IsPrimary { get; }
@@ -22,7 +39,7 @@ internal sealed class SingleInstanceCoordinator : IDisposable
 
     public void StartListening(Action show)
     {
-        if (!IsPrimary)
+        if (!IsPrimary || _listener is not null || _disposed)
         {
             return;
         }
@@ -42,22 +59,30 @@ internal sealed class SingleInstanceCoordinator : IDisposable
 
     public void Dispose()
     {
+        if (_disposed)
+        {
+            return;
+        }
+
+        _disposed = true;
         _stopping = true;
-        _showEvent.Set();
         try
         {
-            _listener?.Wait(TimeSpan.FromSeconds(1));
+            if (_listener is not null)
+            {
+                _showEvent.Set();
+                _listener.GetAwaiter().GetResult();
+            }
         }
-        catch (AggregateException)
+        finally
         {
-        }
+            _showEvent.Dispose();
+            if (IsPrimary)
+            {
+                _mutex.ReleaseMutex();
+            }
 
-        _showEvent.Dispose();
-        if (IsPrimary)
-        {
-            _mutex.ReleaseMutex();
+            _mutex.Dispose();
         }
-
-        _mutex.Dispose();
     }
 }

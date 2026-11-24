@@ -1,3 +1,5 @@
+using System.IO;
+using System.Security;
 using Microsoft.Win32;
 
 namespace TokenHud.App;
@@ -7,23 +9,46 @@ internal static class StartupRegistration
     private const string RunKey = @"Software\Microsoft\Windows\CurrentVersion\Run";
     private const string ValueName = "TokenHUD";
 
-    public static bool IsEnabled()
+    public static bool TryGetEnabled(out bool enabled)
     {
-        using var key = Registry.CurrentUser.OpenSubKey(RunKey);
-        return key?.GetValue(ValueName) is string value && !string.IsNullOrWhiteSpace(value);
+        enabled = false;
+        try
+        {
+            using var key = Registry.CurrentUser.OpenSubKey(RunKey);
+            enabled = key?.GetValue(ValueName) is string value && !string.IsNullOrWhiteSpace(value);
+            return true;
+        }
+        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or SecurityException)
+        {
+            return false;
+        }
     }
 
-    public static void SetEnabled(bool enabled)
+    public static bool TrySetEnabled(bool enabled)
     {
-        using var key = Registry.CurrentUser.CreateSubKey(RunKey);
-        if (enabled)
+        try
         {
-            var executable = Environment.ProcessPath ?? throw new InvalidOperationException("The executable path is unavailable.");
-            key.SetValue(ValueName, $"\"{executable}\" --startup", RegistryValueKind.String);
+            if (enabled)
+            {
+                if (Environment.ProcessPath is not { } executable)
+                {
+                    return false;
+                }
+
+                using var key = Registry.CurrentUser.CreateSubKey(RunKey);
+                key.SetValue(ValueName, $"\"{executable}\" --startup", RegistryValueKind.String);
+            }
+            else
+            {
+                using var key = Registry.CurrentUser.OpenSubKey(RunKey, writable: true);
+                key?.DeleteValue(ValueName, throwOnMissingValue: false);
+            }
+
+            return true;
         }
-        else
+        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or SecurityException)
         {
-            key.DeleteValue(ValueName, throwOnMissingValue: false);
+            return false;
         }
     }
 }

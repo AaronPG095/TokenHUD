@@ -44,7 +44,35 @@ The data-source adapter is isolated because Codex's local storage is an implemen
 dotnet restore .\TokenHud.slnx
 dotnet build .\TokenHud.slnx --no-restore
 dotnet .\tests\TokenHud.SelfTest\bin\Debug\net10.0\TokenHud.SelfTest.dll
-dotnet publish .\src\TokenHud.App\TokenHud.App.csproj -c Release -r win-x64 --self-contained true
+```
+
+## Private Windows x64 package
+
+On Windows, use the .NET 10 SDK to build the self-contained WPF package:
+
+```powershell
+.\scripts\Build-TokenHudPackage.ps1
+```
+
+The build writes the ZIP, the ZIP's SHA-256 checksum, and three installer scripts to `artifacts\windows-x64`. Keep those five files together when sharing the package privately. The checksum verifies the ZIP against the accompanying digest. Obtain both from the same trusted build. The application is unsigned.
+
+Open PowerShell in that package directory and install for your Windows account:
+
+```powershell
+.\Install-TokenHud.ps1
+```
+
+Launch **Token HUD** from the Start menu. The installer places the app in `%LOCALAPPDATA%\Programs\TokenHUD\app`. The app includes its .NET runtime and requires no administrator access.
+
+To update, exit Token HUD from its tray menu, then run the installer from the new package directory. The installer checks the ZIP and stages a complete app before replacing the previous copy. To uninstall, exit the app and run `.\Uninstall-TokenHud.ps1` from the package directory. Uninstall preserves settings, metrics history, and diagnostics in `%LOCALAPPDATA%\TokenHUD`.
+
+For a disposable smoke check, run the following from the package directory. Close the demo before uninstalling.
+
+```powershell
+$smokeRoot = Join-Path ([IO.Path]::GetTempPath()) ("TokenHUD-smoke-" + [Guid]::NewGuid().ToString('N'))
+.\Install-TokenHud.ps1 -InstallRoot $smokeRoot -NoShellIntegration
+& "$smokeRoot\app\TokenHUD.exe" --demo
+.\Uninstall-TokenHud.ps1 -InstallRoot $smokeRoot -NoShellIntegration
 ```
 
 ## Current boundary

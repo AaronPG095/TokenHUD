@@ -48,6 +48,8 @@ public sealed class SettingsStore
 {
     private static readonly JsonSerializerOptions Options = new() { WriteIndented = true };
     private readonly AppDataPaths _paths;
+    private bool _existingSettingsUnreadable;
+    private readonly SemaphoreSlim _saveGate = new(1, 1);
 
     public SettingsStore(AppDataPaths paths)
     {
@@ -56,32 +58,65 @@ public sealed class SettingsStore
 
     public async Task<HudSettings> LoadAsync(CancellationToken cancellationToken = default)
     {
-        if (!File.Exists(_paths.Settings))
-        {
-            return new HudSettings();
-        }
-
         try
         {
-            await using var stream = new FileStream(_paths.Settings, FileMode.Open, FileAccess.Read, FileShare.Read);
-            return await JsonSerializer.DeserializeAsync<HudSettings>(stream, Options, cancellationToken).ConfigureAwait(false)
+            await using var stream = new FileStream(_paths.Settings, FileMode.Open, FileAccess.Read, FileShare.Read | FileShare.Delete);
+            var settings = await JsonSerializer.DeserializeAsync<HudSettings>(stream, Options, cancellationToken).ConfigureAwait(false)
                 ?? new HudSettings();
+            settings.AlertStates ??= new Dictionary<string, int>(StringComparer.Ordinal);
+            settings.ChatContextBudgets ??= new Dictionary<string, long>(StringComparer.Ordinal);
+            settings.AlertPreferences ??= new BudgetAlertPreferences();
+            settings.BudgetAlertStates ??= new Dictionary<string, BudgetAlertState>(StringComparer.Ordinal);
+            _existingSettingsUnreadable = false;
+            return settings;
         }
-        catch (JsonException)
+        catch (Exception exception) when (exception is FileNotFoundException or DirectoryNotFoundException or JsonException)
         {
+            _existingSettingsUnreadable = false;
+            return new HudSettings();
+        }
+        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
+        {
+            _existingSettingsUnreadable = true;
             return new HudSettings();
         }
     }
 
     public async Task SaveAsync(HudSettings settings, CancellationToken cancellationToken = default)
     {
-        Directory.CreateDirectory(_paths.Root);
-        var temporary = _paths.Settings + ".tmp";
-        await using (var stream = new FileStream(temporary, FileMode.Create, FileAccess.Write, FileShare.None))
+        cancellationToken.ThrowIfCancellationRequested();
+        var data = JsonSerializer.SerializeToUtf8Bytes(settings, Options);
+        await _saveGate.WaitAsync(cancellationToken).ConfigureAwait(false);
+        try
         {
-            await JsonSerializer.SerializeAsync(stream, settings, Options, cancellationToken).ConfigureAwait(false);
-        }
+            if (_existingSettingsUnreadable)
+            {
+                throw new IOException("Existing settings could not be read and must be preserved.");
+            }
 
-        File.Move(temporary, _paths.Settings, overwrite: true);
+            Directory.CreateDirectory(_paths.Root);
+            var temporary = $"{_paths.Settings}.{Guid.NewGuid():N}.tmp";
+            try
+            {
+                await File.WriteAllBytesAsync(temporary, data, cancellationToken).ConfigureAwait(false);
+                cancellationToken.ThrowIfCancellationRequested();
+                File.Move(temporary, _paths.Settings, overwrite: true);
+            }
+            finally
+            {
+                try
+                {
+                    File.Delete(temporary);
+                }
+                catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
+                {
+                    // Preserve the original save error if temporary file cleanup also fails.
+                }
+            }
+        }
+        finally
+        {
+            _saveGate.Release();
+        }
     }
 }

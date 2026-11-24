@@ -21,6 +21,8 @@ internal sealed class HudMonitor : IAsyncDisposable
     private readonly SemaphoreSlim _wake = new(0, 1);
     private readonly List<FileSystemWatcher> _watchers = [];
     private Task? _loop;
+    private volatile bool _stopping;
+    private volatile bool _refreshFailed;
     private DateTimeOffset _lastRefreshAt = DateTimeOffset.MinValue;
     private DateTimeOffset _lastHealthLogAt = DateTimeOffset.MinValue;
 
@@ -38,6 +40,8 @@ internal sealed class HudMonitor : IAsyncDisposable
 
     public event EventHandler<(MonitorOptions Options, HudSnapshot Snapshot)>? SnapshotChanged;
 
+    public bool RefreshFailed => _refreshFailed;
+
     public void Start()
     {
         CreateWatcher(_paths.Sessions, "*.jsonl", includeSubdirectories: true);
@@ -48,6 +52,11 @@ internal sealed class HudMonitor : IAsyncDisposable
 
     public void RequestRefresh()
     {
+        if (_stopping)
+        {
+            return;
+        }
+
         try
         {
             _wake.Release();
@@ -56,12 +65,21 @@ internal sealed class HudMonitor : IAsyncDisposable
         {
             // A refresh is already queued.
         }
+        catch (ObjectDisposedException) when (_stopping)
+        {
+            // A watcher callback can already be in flight during shutdown.
+        }
     }
 
     public async ValueTask DisposeAsync()
     {
+        _stopping = true;
+        foreach (var watcher in _watchers)
+        {
+            watcher.Dispose();
+        }
+
         _cancellation.Cancel();
-        RequestRefresh();
         if (_loop is not null)
         {
             try
@@ -71,11 +89,6 @@ internal sealed class HudMonitor : IAsyncDisposable
             catch (OperationCanceledException)
             {
             }
-        }
-
-        foreach (var watcher in _watchers)
-        {
-            watcher.Dispose();
         }
 
         _wake.Dispose();
@@ -115,6 +128,7 @@ internal sealed class HudMonitor : IAsyncDisposable
                         options.Search,
                         cancellationToken,
                         profiles: options.Profiles).ConfigureAwait(false);
+                    _refreshFailed = false;
                     _lastRefreshAt = DateTimeOffset.UtcNow;
                     SnapshotChanged?.Invoke(this, (options, snapshot));
                     if (_lastRefreshAt - _lastHealthLogAt >= TimeSpan.FromMinutes(5))
@@ -136,7 +150,11 @@ internal sealed class HudMonitor : IAsyncDisposable
                 }
                 catch (Exception)
                 {
-                    await _diagnostics.WriteAsync("refresh_failed", DiagnosticLevel.Error, cancellationToken: cancellationToken).ConfigureAwait(false);
+                    if (!_refreshFailed)
+                    {
+                        _refreshFailed = true;
+                        await _diagnostics.WriteAsync("refresh_failed", DiagnosticLevel.Error, cancellationToken: cancellationToken).ConfigureAwait(false);
+                    }
                 }
             }
 
@@ -151,19 +169,29 @@ internal sealed class HudMonitor : IAsyncDisposable
             return;
         }
 
-        var watcher = new FileSystemWatcher(directory, filter)
+        FileSystemWatcher? watcher = null;
+        try
         {
-            IncludeSubdirectories = includeSubdirectories,
-            NotifyFilter = NotifyFilters.FileName | NotifyFilters.LastWrite | NotifyFilters.Size,
-            InternalBufferSize = 32 * 1024,
-            EnableRaisingEvents = true,
-        };
-        watcher.Changed += OnFileChanged;
-        watcher.Created += OnFileChanged;
-        watcher.Renamed += OnFileChanged;
-        watcher.Deleted += OnFileChanged;
-        watcher.Error += OnWatcherError;
-        _watchers.Add(watcher);
+            watcher = new FileSystemWatcher(directory, filter)
+            {
+                IncludeSubdirectories = includeSubdirectories,
+                NotifyFilter = NotifyFilters.FileName | NotifyFilters.LastWrite | NotifyFilters.Size,
+                InternalBufferSize = 32 * 1024,
+            };
+            watcher.Changed += OnFileChanged;
+            watcher.Created += OnFileChanged;
+            watcher.Renamed += OnFileChanged;
+            watcher.Deleted += OnFileChanged;
+            watcher.Error += OnWatcherError;
+            watcher.EnableRaisingEvents = true;
+            _watchers.Add(watcher);
+        }
+        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or ArgumentException)
+        {
+            watcher?.Dispose();
+            // Periodic polling continues when the directory cannot be watched.
+            _ = _diagnostics.WriteAsync("watcher_error", DiagnosticLevel.Warning);
+        }
     }
 
     private void OnFileChanged(object sender, FileSystemEventArgs e) => RequestRefresh();

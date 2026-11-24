@@ -4,6 +4,8 @@ var tests = new List<(string Name, Func<Task> Run)>
 {
     ("parses token events", ParseTokenEventAsync),
     ("stores only retained local metrics", MetricsHistoryTests.StoresOnlyRetainedMeasurementsAsync),
+    ("keeps diagnostic export operational and private", VerifyDiagnosticPrivacyAsync),
+    ("preserves settings across cancelled and concurrent saves", SettingsStoreFixtures.VerifyInterruptedAndOverlappingSavesAsync),
     ("enforces budget boundaries", BudgetBoundariesAsync),
     ("resolves inherited budgets against current model limits", ContextBudgetTests.ResolvesHierarchyAndReportedLimitsAsync),
     ("deduplicates zone alerts and respects cooldown and snooze", BudgetAlertTests.RunAsync),
@@ -116,6 +118,38 @@ static async Task BuildLiveSnapshotAsync()
     Check(snapshot.Tracked is not null, "No tracked top-level chat was selected.");
     Check(snapshot.RecentChats.Count is > 0 and <= 6, "Recent chat selection is outside the expected range.");
     Check(snapshot.ParsedRolloutCount > 0, "No rollout token events were parsed into the snapshot.");
+}
+
+static async Task VerifyDiagnosticPrivacyAsync()
+{
+    var home = Directory.CreateTempSubdirectory("tokenhud-diagnostics-");
+    try
+    {
+        var paths = new AppDataPaths(home.FullName);
+        await File.WriteAllTextAsync(paths.Diagnostics, "The diagnostics directory is intentionally blocked.");
+        var diagnostics = new RollingDiagnostics(paths);
+        await diagnostics.WriteAsync("fixture-blocked-output");
+
+        var now = DateTimeOffset.UtcNow;
+        var root = new ThreadRecord("private-chat-id", @"C:\secret\rollout.jsonl", now, now,
+            @"C:\secret\workspace", "Private fixture chat name", 765_432, false, null, null, null, null, null, null);
+        var tokens = new TokenBreakdown(765_432, 0, 0, 0, 0, 765_432);
+        var usage = new UsageSnapshot(now, tokens, tokens, null, null);
+        var tracked = new ChatUsage(root, usage, BudgetAnalyzer.Analyze([usage], new BudgetPolicy()),
+            tokens, [], null, now);
+        var snapshot = new HudSnapshot(tracked, [tracked], [root], null, now, true, 1, "Private fixture source");
+        var summary = diagnostics.BuildSummary(snapshot);
+        Check(summary.Contains("Readable rollout count: 1", StringComparison.Ordinal),
+            "The diagnostic summary did not include operational counts.");
+        foreach (var forbidden in new[] { root.Id, root.RolloutPath, root.Cwd, root.Title, snapshot.SourceStatus, "765432" })
+        {
+            Check(!summary.Contains(forbidden, StringComparison.Ordinal), "The diagnostic summary exposed a non-operational field.");
+        }
+    }
+    finally
+    {
+        home.Delete(recursive: true);
+    }
 }
 
 static void Check(bool condition, string message)

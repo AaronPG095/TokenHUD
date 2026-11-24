@@ -13,6 +13,7 @@ internal sealed class ThemeService : IDisposable
     }
 
     public bool IsDark { get; private set; }
+    public event Action? PaletteChanged;
 
     public void Apply()
     {
@@ -38,6 +39,7 @@ internal sealed class ThemeService : IDisposable
             Set("CriticalBrush", System.Windows.SystemColors.WindowTextColor);
             Set("OverBudgetBrush", System.Windows.SystemColors.WindowTextColor);
             IsDark = false;
+            PaletteChanged?.Invoke();
             return;
         }
 
@@ -80,6 +82,7 @@ internal sealed class ThemeService : IDisposable
         {
             Set(key, (System.Windows.Media.Color)System.Windows.Media.ColorConverter.ConvertFromString(value));
         }
+        PaletteChanged?.Invoke();
     }
 
     public void Dispose() => SystemEvents.UserPreferenceChanged -= OnUserPreferenceChanged;
