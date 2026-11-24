@@ -1,7 +1,7 @@
 ---
 title: Plan - Feature: Expanded Chat Inspector
 ticket: https://app.notion.com/p/TH-Plan-Feature-Expanded-Chat-Inspector-4220b9c6786f8147bfb4f48ac8290f48
-status: in-progress
+status: shipped
 appetite: L
 impact: minor
 devTicketKey: TH:TH-Plan-Expanded-Chat-Inspector-2026-11
@@ -14,6 +14,7 @@ reviewModel: gpt-6.2-sol
 reviewSession: /root/compact_reviewer
 baseBranch: main
 reviewFingerprint: 175fa8fac3fb96fb44f5291c9a5d59bbbb8a1805cf2f9a2fd9775b9e36ffb2d3
+pr: https://github.com/AaronPG095/TokenHUD/pull/14
 ---
 # Expanded Chat Inspector
 
