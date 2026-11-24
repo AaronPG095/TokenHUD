@@ -35,6 +35,7 @@ internal static class CatalogFixtures
             await File.WriteAllTextAsync(unnamedRollout, "Synthetic rollout content");
             var unnamedActivity = new DateTimeOffset(2026, 11, 1, 10, 0, 0, TimeSpan.Zero);
             File.SetLastWriteTimeUtc(unnamedRollout, unnamedActivity.UtcDateTime);
+            File.SetLastWriteTimeUtc(namedRollout, unnamedActivity.AddHours(1).UtcDateTime);
 
             var catalog = new CodexCatalog(paths);
             var fallback = await catalog.LoadAsync();
@@ -43,6 +44,15 @@ internal static class CatalogFixtures
                 fallback.Threads.Single(thread => thread.Id == namedId).UpdatedAt != unnamedActivity.AddHours(2))
             {
                 throw new InvalidOperationException("Index-only catalog activity did not use the valid rename or file timestamp.");
+            }
+
+            var laterRolloutActivity = unnamedActivity.AddHours(3);
+            File.SetLastWriteTimeUtc(namedRollout, laterRolloutActivity.UtcDateTime);
+            fallback = await catalog.LoadAsync();
+            ValidateNames(fallback, namedId, unnamedId, databaseAvailable: false);
+            if (fallback.Threads.Single(thread => thread.Id == namedId).UpdatedAt != laterRolloutActivity)
+            {
+                throw new InvalidOperationException("Index-only catalog activity was stuck at the last rename after newer rollout activity.");
             }
 
             using (var connection = OpenStateDatabase(paths))

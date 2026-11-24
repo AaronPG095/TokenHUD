@@ -185,7 +185,8 @@ public sealed class RolloutReader
         }
 
         int? minutes = null;
-        if (element.TryGetProperty("window_minutes", out var minutesElement) && minutesElement.TryGetInt32(out var parsedMinutes))
+        if (element.TryGetProperty("window_minutes", out var minutesElement) &&
+            minutesElement.ValueKind == JsonValueKind.Number && minutesElement.TryGetInt32(out var parsedMinutes))
         {
             minutes = parsedMinutes;
         }
@@ -193,19 +194,38 @@ public sealed class RolloutReader
         DateTimeOffset? reset = null;
         if (element.TryGetProperty("resets_at", out var resetElement))
         {
-            if (resetElement.ValueKind == JsonValueKind.Number && resetElement.TryGetInt64(out var unix))
+            reset = ParseReset(resetElement);
+            if (reset is null)
             {
-                reset = unix > 10_000_000_000
-                    ? DateTimeOffset.FromUnixTimeMilliseconds(unix)
-                    : DateTimeOffset.FromUnixTimeSeconds(unix);
-            }
-            else if (resetElement.ValueKind == JsonValueKind.String && DateTimeOffset.TryParse(resetElement.GetString(), out var parsed))
-            {
-                reset = parsed;
+                return null;
             }
         }
 
         return new RateLimitWindow(used, minutes, reset);
+    }
+
+    private static DateTimeOffset? ParseReset(JsonElement element)
+    {
+        if (element.ValueKind == JsonValueKind.String && DateTimeOffset.TryParse(element.GetString(), out var parsed))
+        {
+            return parsed;
+        }
+
+        if (element.ValueKind != JsonValueKind.Number || !element.TryGetInt64(out var unix))
+        {
+            return null;
+        }
+
+        try
+        {
+            return unix > 10_000_000_000
+                ? DateTimeOffset.FromUnixTimeMilliseconds(unix)
+                : DateTimeOffset.FromUnixTimeSeconds(unix);
+        }
+        catch (ArgumentOutOfRangeException)
+        {
+            return null;
+        }
     }
 
     private static long GetInt64(JsonElement element, string name) =>
@@ -227,7 +247,8 @@ public sealed class RolloutReader
     private static bool TryGetDouble(JsonElement element, string name, out double value)
     {
         value = 0;
-        return element.TryGetProperty(name, out var property) && property.TryGetDouble(out value);
+        return element.TryGetProperty(name, out var property) && property.ValueKind == JsonValueKind.Number &&
+            property.TryGetDouble(out value) && double.IsFinite(value);
     }
 
     private static DateTimeOffset? TryGetTimestamp(JsonElement element, string name) =>

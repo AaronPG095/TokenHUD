@@ -199,9 +199,9 @@ public sealed class CodexCatalog
                 continue;
             }
 
-            var fileTime = File.GetLastWriteTimeUtc(path);
+            var fileTime = new DateTimeOffset(File.GetLastWriteTimeUtc(path));
             var hasIndexedName = index.TryGetValue(id, out var indexed);
-            var updated = hasIndexedName ? indexed.Updated : new DateTimeOffset(fileTime);
+            var updated = hasIndexedName ? Max(indexed.Updated, fileTime) : fileTime;
             var title = hasIndexedName ? indexed.Title : string.Empty;
             output.Add(new ThreadRecord(id, path, updated, updated, string.Empty, title, 0, archived, null, null, null, null, null, null));
         }

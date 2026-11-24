@@ -33,7 +33,33 @@ internal static class QuotaTests
         Check(AccountQuota.LatestFrom([missingReset], now)?.FiveHour is null, "A window without a reset outlived its reported duration.");
         Check(AccountQuota.LatestFrom([Observe(now, null)], now) is null, "Missing quota observations produced a quota.");
 
+        VerifyMalformedWindows(now, weekly);
         return Task.CompletedTask;
+    }
+
+    private static void VerifyMalformedWindows(DateTimeOffset now, RateLimitWindow weekly)
+    {
+        var reader = new RolloutReader();
+        string[] malformedWindows =
+        [
+            """{"used_percent":"40","window_minutes":300}""",
+            """{"used_percent":1e999,"window_minutes":300}""",
+            """{"used_percent":40,"window_minutes":[]}""",
+            """{"used_percent":40,"window_minutes":300,"resets_at":9223372036854775807}""",
+            """{"used_percent":40,"window_minutes":300,"resets_at":-9223372036854775808}""",
+            """{"used_percent":40,"window_minutes":300,"resets_at":"invalid"}""",
+            """{"used_percent":40,"window_minutes":300,"resets_at":null}""",
+        ];
+
+        foreach (var primary in malformedWindows)
+        {
+            var parsed = reader.TryParseUsage($$"""
+                {"timestamp":"2026-11-24T12:00:00Z","type":"event_msg","payload":{"type":"token_count","rate_limits":{"primary":{{primary}},"secondary":{"used_percent":20,"window_minutes":10080,"resets_at":"2026-11-26T12:00:00Z"} } } }
+                """);
+            Check(parsed?.Quota?.Weekly == weekly, $"Malformed quota discarded its valid sibling. Window {primary}");
+            var quota = AccountQuota.LatestFrom([parsed!], now);
+            Check(quota?.FiveHour is null && quota?.Weekly == weekly, $"Malformed quota became current. Window {primary}");
+        }
     }
 
     private static AccountQuota Quota(RateLimitWindow? primary, RateLimitWindow? secondary) =>

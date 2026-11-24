@@ -8,6 +8,9 @@ devTicketKey: TH:TH-Plan-Reliable-Token-HUD-Readings-2026-11
 agent: Codex
 branch: codex/tokenhud-reliable-readings
 worktree: TokenHUD
+reviewedBy: Codex
+reviewVerdict: block
+reviewModel: gpt-6.2-sol
 ---
 # Reliable Token HUD Readings
 
@@ -56,3 +59,4 @@ Aaron approved the five-PR scope and layout direction on 2026-11-24 with “Agre
 
 ## Progress log
 - 2026-11-24 10:54 UTC, Codex (handoff): Done: Created the approved plan and Notion Development ticket, implemented the reading reliability changes in the isolated worktree, and passed 9 of 9 tests before registering the final context fixture. Corrected evidence attached to the wrong items.; Next: Resume the evidence step with full checkbox text instead of changing indexes, build and test the final revision, then obtain independent review and ship PR 1.; Open: A batch reused changing open-item indexes and tick 7 failed. The remaining criteria are open. Final context fixture and exact final build are unverified. Implementation edits are preserved in the isolated worktree.; Tree: 13 dirty file(s)
+- 2026-11-24 11:02 UTC, Codex (review: block): Fallback catalog ignores newer rollout activity for named sessions. Malformed quota fields can abort a refresh. Independent pack passed 10 of 10 checks. (model: gpt-6.2-sol)
