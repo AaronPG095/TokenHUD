@@ -38,9 +38,13 @@
                     <ColumnDefinition Width="Auto" />
                 </Grid.ColumnDefinitions>
                 <Ellipse x:Name="HealthDot" Grid.Column="0" Width="8" Height="8" Margin="14,0,10,0"
-                         Fill="{DynamicResource HealthyBrush}" VerticalAlignment="Center"
-                         automation:AutomationProperties.Name="Local source healthy" />
-                <TextBlock Grid.Column="1" Text="Token HUD" FontSize="13" FontWeight="SemiBold" VerticalAlignment="Center" />
+                         Fill="{DynamicResource MutedBrush}" VerticalAlignment="Center"
+                         automation:AutomationProperties.Name="Waiting for a local refresh" />
+                <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
+                    <TextBlock Text="Token HUD" FontSize="13" FontWeight="SemiBold" />
+                    <TextBlock x:Name="MonitorStatusLabel" Margin="8,0,0,0" Style="{StaticResource MutedText}"
+                               FontSize="10.5" VerticalAlignment="Center" Visibility="Collapsed" />
+                </StackPanel>
                 <StackPanel Grid.Column="2" Orientation="Horizontal" Margin="4,0,6,0"
                             automation:AutomationProperties.Name="Window controls">
                     <Button x:Name="PrivacyButton" Style="{StaticResource IconButton}" Click="PrivacyButton_Click"
@@ -201,10 +205,10 @@
                                 </StackPanel>
                                 <Border x:Name="ZoneBadge" HorizontalAlignment="Right" Padding="7,3" Background="{DynamicResource CanvasBrush}"
                                         BorderBrush="{DynamicResource SurfaceStrongBrush}" BorderThickness="1" CornerRadius="6" VerticalAlignment="Center">
-                                    <TextBlock x:Name="ZoneLabel" Text="Healthy" FontSize="10.5" FontWeight="SemiBold" />
+                                    <TextBlock x:Name="ZoneLabel" Text="Unavailable" FontSize="10.5" FontWeight="SemiBold" />
                                 </Border>
                             </Grid>
-                            <ProgressBar x:Name="ContextMeter" Grid.Row="1" Style="{StaticResource Meter}" Margin="0,7,0,0"
+                            <ProgressBar x:Name="ContextMeter" Grid.Row="1" Visibility="Hidden" Style="{StaticResource Meter}" Margin="0,7,0,0"
                                          automation:AutomationProperties.Name="Context budget used" />
                             <TextBlock x:Name="OriginStatusLabel" Grid.Row="2" Text="Context origin unavailable for this adapter"
                                        Style="{StaticResource MutedText}" FontSize="10.5" Margin="0,5,0,0" />
@@ -224,9 +228,9 @@
                                 </Grid>
                                 <Grid Height="7" Margin="0,6,0,5" ClipToBounds="True">
                                     <Grid.ColumnDefinitions>
-                                        <ColumnDefinition x:Name="InputCachedColumn" Width="1*" />
+                                        <ColumnDefinition x:Name="InputCachedColumn" Width="0" />
                                         <ColumnDefinition x:Name="InputWriteColumn" Width="0*" />
-                                        <ColumnDefinition x:Name="InputNewColumn" Width="1*" />
+                                        <ColumnDefinition x:Name="InputNewColumn" Width="0" />
                                     </Grid.ColumnDefinitions>
                                     <Border Grid.Column="0" Background="{DynamicResource PrimaryBrush}" CornerRadius="3,0,0,3" />
                                     <Border Grid.Column="1" Background="{DynamicResource AccentBrush}" />
@@ -256,8 +260,8 @@
                                 </Grid>
                                 <Grid Height="7" Margin="0,6,0,5" ClipToBounds="True">
                                     <Grid.ColumnDefinitions>
-                                        <ColumnDefinition x:Name="OutputReasoningColumn" Width="1*" />
-                                        <ColumnDefinition x:Name="OutputVisibleColumn" Width="1*" />
+                                        <ColumnDefinition x:Name="OutputReasoningColumn" Width="0" />
+                                        <ColumnDefinition x:Name="OutputVisibleColumn" Width="0" />
                                     </Grid.ColumnDefinitions>
                                     <Border Grid.Column="0" Background="{DynamicResource PrimaryBrush}" CornerRadius="3,0,0,3" />
                                     <Border Grid.Column="1" Background="{DynamicResource MutedBrush}" CornerRadius="0,3,3,0" />

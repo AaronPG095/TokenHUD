@@ -5,6 +5,11 @@ var tests = new List<(string Name, Func<Task> Run)>
     ("parses token events", ParseTokenEventAsync),
     ("enforces budget boundaries", BudgetBoundariesAsync),
     ("detects velocity and spikes", VelocityAndSpikeAsync),
+    ("resolves current indexed chat names safely", CatalogFixtures.ResolveCurrentNamesAsync),
+    ("orders the six recent chats by tree activity", SnapshotTests.KeepsSixRecentTopLevelChatsAsync),
+    ("classifies and expires independent quota windows", QuotaTests.RunAsync),
+    ("retains current quotas across partial observations", SnapshotTests.RetainsIndependentQuotaWindowsAsync),
+    ("distinguishes missing context from measured zero", ContextReadingTests.RunAsync),
     ("reads the local Codex metadata catalog", ReadLocalCatalogAsync),
     ("builds a live privacy-safe HUD snapshot", BuildLiveSnapshotAsync),
 };
@@ -83,42 +88,21 @@ static async Task ReadLocalCatalogAsync()
     Check(catalog.Threads.Count > 0, "No local Codex metadata was found.");
     Check(catalog.Threads.All(item => !string.IsNullOrWhiteSpace(item.Id)), "A thread is missing its identifier.");
 
-    if (File.Exists(paths.SessionIndex))
+    var reader = new RolloutReader();
+    var recentRollouts = catalog.Threads
+        .Where(item => File.Exists(item.RolloutPath))
+        .OrderByDescending(item => item.UpdatedAt)
+        .Take(20);
+    foreach (var thread in recentRollouts)
     {
-        var currentNames = new Dictionary<string, string>(StringComparer.Ordinal);
-        await foreach (var line in File.ReadLinesAsync(paths.SessionIndex))
+        var history = await reader.ReadRecentUsageAsync(thread.RolloutPath, maxEvents: 8);
+        if (history.Count > 0)
         {
-            try
-            {
-                using var document = System.Text.Json.JsonDocument.Parse(line);
-                var root = document.RootElement;
-                if (root.TryGetProperty("id", out var idElement) &&
-                    root.TryGetProperty("thread_name", out var nameElement) &&
-                    idElement.GetString() is { } id &&
-                    nameElement.GetString() is { } name)
-                {
-                    currentNames[id] = name;
-                }
-            }
-            catch (System.Text.Json.JsonException)
-            {
-            }
-        }
-
-        var namedThread = catalog.Threads.FirstOrDefault(item => currentNames.ContainsKey(item.Id));
-        if (namedThread is not null)
-        {
-            Check(namedThread.Title == currentNames[namedThread.Id], "Catalog did not prefer the current Codex chat name.");
+            return;
         }
     }
 
-    var latest = catalog.Threads.FirstOrDefault(item => File.Exists(item.RolloutPath));
-    if (latest is null)
-    {
-        throw new InvalidOperationException("No readable rollout path was found.");
-    }
-    var history = await new RolloutReader().ReadRecentUsageAsync(latest.RolloutPath, maxEvents: 8);
-    Check(history.Count > 0, "No token-count events were found in the latest readable rollout.");
+    throw new InvalidOperationException("No token-count events were found in the recent readable rollouts.");
 }
 
 static async Task BuildLiveSnapshotAsync()

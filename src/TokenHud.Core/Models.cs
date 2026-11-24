@@ -6,6 +6,7 @@ public enum BudgetZone
     Caution,
     Critical,
     OverBudget,
+    Unavailable,
 }
 
 public sealed record TokenBreakdown(
@@ -40,18 +41,64 @@ public sealed record AccountQuota(
     bool SpendControlReached,
     string? RateLimitReachedType)
 {
-    public RateLimitWindow? FiveHour => KnownWindows
-        .Where(window => window.WindowMinutes is > 0 and < 1_440)
-        .OrderBy(window => Math.Abs(window.WindowMinutes!.Value - 300))
-        .FirstOrDefault();
+    public RateLimitWindow? FiveHour => FindWindow(300);
+    public RateLimitWindow? Weekly => FindWindow(10_080);
 
-    public RateLimitWindow? Weekly => KnownWindows
-        .Where(window => window.WindowMinutes is >= 1_440)
-        .OrderBy(window => Math.Abs(window.WindowMinutes!.Value - 10_080))
-        .FirstOrDefault();
+    public static AccountQuota? LatestFrom(IEnumerable<UsageSnapshot> observations, DateTimeOffset asOf)
+    {
+        AccountQuota? latestQuota = null;
+        (RateLimitWindow Window, DateTimeOffset Timestamp)? fiveHour = null;
+        (RateLimitWindow Window, DateTimeOffset Timestamp)? weekly = null;
 
-    private IEnumerable<RateLimitWindow> KnownWindows =>
-        new[] { Primary, Secondary }.OfType<RateLimitWindow>();
+        foreach (var observation in observations.OrderByDescending(observation => observation.Timestamp))
+        {
+            if (observation.Quota is not { } quota)
+            {
+                continue;
+            }
+
+            latestQuota ??= quota;
+            if (fiveHour is null && quota.FiveHour is { } shortWindow)
+            {
+                fiveHour = (shortWindow, observation.Timestamp);
+            }
+
+            if (weekly is null && quota.Weekly is { } longWindow)
+            {
+                weekly = (longWindow, observation.Timestamp);
+            }
+
+            if (fiveHour is not null && weekly is not null)
+            {
+                break;
+            }
+        }
+
+        return latestQuota is null ? null : latestQuota with
+        {
+            Primary = AvailableWindow(fiveHour, asOf),
+            Secondary = AvailableWindow(weekly, asOf),
+        };
+    }
+
+    private RateLimitWindow? FindWindow(int minutes) =>
+        Primary?.WindowMinutes == minutes ? Primary :
+        Secondary?.WindowMinutes == minutes ? Secondary : null;
+
+    private static RateLimitWindow? AvailableWindow(
+        (RateLimitWindow Window, DateTimeOffset Timestamp)? observation,
+        DateTimeOffset asOf)
+    {
+        if (observation is not { } sample || !double.IsFinite(sample.Window.UsedPercent))
+        {
+            return null;
+        }
+
+        var isCurrent = sample.Window.ResetsAt is { } reset
+            ? reset > asOf
+            : asOf - sample.Timestamp < TimeSpan.FromMinutes(sample.Window.WindowMinutes!.Value);
+        return isCurrent ? sample.Window : null;
+    }
 }
 
 public sealed record UsageSnapshot(
@@ -59,7 +106,9 @@ public sealed record UsageSnapshot(
     TokenBreakdown SessionTotal,
     TokenBreakdown Context,
     long? ModelContextWindow,
-    AccountQuota? Quota);
+    AccountQuota? Quota,
+    bool HasContext = true,
+    bool HasSessionTotal = true);
 
 public sealed record ThreadRecord(
     string Id,

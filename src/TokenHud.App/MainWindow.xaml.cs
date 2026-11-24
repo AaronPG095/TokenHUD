@@ -25,6 +25,7 @@ public partial class MainWindow : Window
     private readonly HudMonitor? _monitor;
     private readonly DispatcherTimer _searchTimer;
     private readonly DispatcherTimer _saveTimer;
+    private readonly DispatcherTimer _freshnessTimer;
     private readonly Dictionary<string, AlertState> _alertStates = new(StringComparer.Ordinal);
     private readonly ObservableCollection<RecentChatDisplayItem> _recentItems = [];
     private readonly ObservableCollection<ChatListItem> _chatItems = [];
@@ -72,6 +73,8 @@ public partial class MainWindow : Window
         _searchTimer.Tick += SearchTimer_Tick;
         _saveTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(500) };
         _saveTimer.Tick += SaveTimer_Tick;
+        _freshnessTimer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(5) };
+        _freshnessTimer.Tick += (_, _) => UpdateMonitorStatus();
 
         _settings.StartWithWindows = StartupRegistration.IsEnabled();
         foreach (var (threadId, value) in _settings.AlertStates)
@@ -123,6 +126,7 @@ public partial class MainWindow : Window
             _monitor = new HudMonitor(builder, diagnostics, GetMonitorOptions, paths);
             _monitor.SnapshotChanged += Monitor_SnapshotChanged;
             _monitor.Start();
+            _freshnessTimer.Start();
         }
 
         Loaded += MainWindow_Loaded;
@@ -152,6 +156,8 @@ public partial class MainWindow : Window
         {
             UpdateSnapshot(DemoData.Create());
         }
+
+        UpdateMonitorStatus();
     }
 
     private MonitorOptions GetMonitorOptions() => new(
@@ -175,9 +181,7 @@ public partial class MainWindow : Window
             {
                 TrackedTitle.Text = "No local Codex chats found";
                 ModeLabel.Text = "Waiting for a chat";
-                ContextValue.Text = "—";
-                ContextMeter.Value = 0;
-                ZoneLabel.Text = "Waiting";
+                UpdateContextMeter(null);
                 OriginStatusLabel.Text = "Context origin unavailable";
                 _threadItems.Clear();
                 UpdateBreakdown(null);
@@ -190,16 +194,10 @@ public partial class MainWindow : Window
                 PinButton.Foreground = FindBrush(isPinned ? "PrimaryBrush" : "MutedBrush");
                 PinButton.ToolTip = isPinned ? "Follow latest chat" : "Pin current chat";
                 AutomationProperties.SetName(PinButton, isPinned ? "Follow latest chat" : "Pin current chat");
-                ContextValue.Text = FormatTokens(tracked.Analysis.Load);
-                BudgetValue.Text = $" / {FormatTokens(_settings.ContextBudget)}";
-                ContextMeter.Value = Math.Clamp(tracked.Analysis.BudgetPercent, 0, 100);
-                var zoneBrush = FindBrush(ZoneBrushName(tracked.Analysis.Zone));
-                ContextMeter.Foreground = zoneBrush;
-                ZoneLabel.Text = ZoneName(tracked.Analysis.Zone);
-                ZoneLabel.Foreground = zoneBrush;
-                ZoneBadge.BorderBrush = zoneBrush;
-                AutomationProperties.SetName(ContextMeter, $"Context budget {tracked.Analysis.BudgetPercent:0.#} percent used, {ZoneName(tracked.Analysis.Zone)}");
-                OriginStatusLabel.Text = "Experimental Codex adapter · Context origin unavailable";
+                UpdateContextMeter(tracked.Analysis);
+                OriginStatusLabel.Text = tracked.Analysis.Zone == BudgetZone.Unavailable
+                    ? "Context measurement unavailable"
+                    : "Experimental Codex adapter · Context origin unavailable";
 
                 UpdateBreakdown(tracked);
                 UpdateThreadGrid(tracked);
@@ -209,14 +207,7 @@ public partial class MainWindow : Window
             UpdateRecentList(snapshot);
             UpdateChatList(snapshot);
             CompactBudgetLabel.Text = $"CONTEXT / {FormatTokens(_settings.ContextBudget)}";
-            SourceHealthLabel.Text = $"Experimental Codex adapter · {snapshot.SourceStatus}";
-            RefreshLabel.Text = $"Updated {snapshot.RefreshedAt:HH:mm:ss}";
-            HealthDot.Fill = FindBrush(snapshot.StateDatabaseAvailable ? "HealthyBrush" : "CautionBrush");
-            HealthDot.ToolTip = snapshot.StateDatabaseAvailable
-                ? "Experimental Codex adapter · Local source healthy"
-                : "Experimental Codex adapter · Local source fallback active";
-            AutomationProperties.SetName(HealthDot, HealthDot.ToolTip.ToString());
-            _trayIcon.Text = MakeTrayText(tracked);
+            UpdateMonitorStatus();
             CheckAlerts(snapshot);
         }
         finally
@@ -225,19 +216,64 @@ public partial class MainWindow : Window
         }
     }
 
+    private void UpdateContextMeter(ContextAnalysis? analysis)
+    {
+        var zone = analysis?.Zone ?? BudgetZone.Unavailable;
+        var zoneBrush = FindBrush(ZoneBrushName(zone));
+        ContextValue.Text = FormatContext(analysis);
+        BudgetValue.Text = $" / {FormatTokens(_settings.ContextBudget)}";
+        ContextMeter.Visibility = zone == BudgetZone.Unavailable ? Visibility.Hidden : Visibility.Visible;
+        ContextMeter.Value = Math.Clamp(analysis?.BudgetPercent ?? 0, 0, 100);
+        ContextMeter.Foreground = zoneBrush;
+        ZoneLabel.Text = ZoneName(zone);
+        ZoneLabel.Foreground = zoneBrush;
+        ZoneBadge.BorderBrush = zoneBrush;
+        AutomationProperties.SetName(ContextMeter, zone == BudgetZone.Unavailable
+            ? "Context measurement unavailable"
+            : $"Context budget {analysis!.BudgetPercent:0.#} percent used, {ZoneName(zone)}");
+    }
+
+    private void UpdateMonitorStatus()
+    {
+        var snapshot = _snapshot;
+        var paused = !_demo && _settings.MonitoringPaused;
+        // Allow three missed polling intervals before marking a running monitor stale.
+        var stale = !_demo && snapshot is not null &&
+            (paused || DateTimeOffset.UtcNow - snapshot.RefreshedAt >= TimeSpan.FromSeconds(45));
+        MonitorStatusLabel.Text = stale ? "Stale" : paused ? "Paused" : string.Empty;
+        MonitorStatusLabel.Visibility = stale || paused ? Visibility.Visible : Visibility.Collapsed;
+
+        var status = stale ? (paused ? "Monitoring paused · Data stale" : "Data stale")
+            : paused ? "Monitoring paused"
+            : snapshot?.SourceStatus ?? "Waiting for a local refresh";
+        SourceHealthLabel.Text = $"Experimental Codex adapter · {status}";
+        RefreshLabel.Text = snapshot is null ? "—" : $"Updated {snapshot.RefreshedAt:HH:mm:ss}";
+        HealthDot.Fill = FindBrush(stale || paused ? "CautionBrush" : snapshot?.StateDatabaseAvailable switch
+        {
+            true => "HealthyBrush",
+            false => "CautionBrush",
+            null => "MutedBrush",
+        });
+        HealthDot.ToolTip = SourceHealthLabel.Text;
+        MonitorStatusLabel.ToolTip = SourceHealthLabel.Text;
+        AutomationProperties.SetName(HealthDot, SourceHealthLabel.Text);
+        _trayIcon.Text = MakeTrayText(snapshot?.Tracked, stale, paused);
+    }
+
     private void UpdateBreakdown(ChatUsage? tracked)
     {
-        var flow = tracked?.Latest?.Context ?? TokenBreakdown.Empty;
+        var hasContext = tracked is { Analysis.Zone: not BudgetZone.Unavailable, Latest.HasContext: true };
+        var flow = hasContext ? tracked!.Latest!.Context : TokenBreakdown.Empty;
         var newInput = Math.Max(0, flow.InputTokens - flow.CachedInputTokens - flow.CacheWriteInputTokens);
         var visibleOutput = Math.Max(0, flow.OutputTokens - flow.ReasoningOutputTokens);
 
-        InputValue.Text = flow.InputTokens == 0 ? "—" : FormatTokens(flow.InputTokens);
-        CachedValue.Text = FormatTokens(flow.CachedInputTokens);
-        CacheWriteValue.Text = FormatTokens(flow.CacheWriteInputTokens);
-        NewInputValue.Text = FormatTokens(newInput);
-        OutputValue.Text = flow.OutputTokens == 0 ? "—" : FormatTokens(flow.OutputTokens);
-        ReasoningValue.Text = FormatTokens(flow.ReasoningOutputTokens);
-        VisibleOutputValue.Text = FormatTokens(visibleOutput);
+        InputValue.Text = FormatMeasuredTokens(flow.InputTokens, hasContext);
+        CachedValue.Text = FormatMeasuredTokens(flow.CachedInputTokens, hasContext);
+        CacheWriteValue.Text = FormatMeasuredTokens(flow.CacheWriteInputTokens, hasContext);
+        NewInputValue.Text = FormatMeasuredTokens(newInput, hasContext);
+        OutputValue.Text = FormatMeasuredTokens(flow.OutputTokens, hasContext);
+        ReasoningValue.Text = FormatMeasuredTokens(flow.ReasoningOutputTokens, hasContext);
+        VisibleOutputValue.Text = FormatMeasuredTokens(visibleOutput, hasContext);
 
         SetFlowColumns(InputCachedColumn, InputWriteColumn, InputNewColumn,
             flow.CachedInputTokens, flow.CacheWriteInputTokens, newInput);
@@ -251,13 +287,6 @@ public partial class MainWindow : Window
         long firstValue,
         long secondValue)
     {
-        if (firstValue + secondValue <= 0)
-        {
-            first.Width = new GridLength(1, GridUnitType.Star);
-            second.Width = new GridLength(1, GridUnitType.Star);
-            return;
-        }
-
         first.Width = new GridLength(Math.Max(0, firstValue), GridUnitType.Star);
         second.Width = new GridLength(Math.Max(0, secondValue), GridUnitType.Star);
     }
@@ -270,14 +299,6 @@ public partial class MainWindow : Window
         long secondValue,
         long thirdValue)
     {
-        if (firstValue + secondValue + thirdValue <= 0)
-        {
-            first.Width = new GridLength(1, GridUnitType.Star);
-            second.Width = new GridLength(0);
-            third.Width = new GridLength(1, GridUnitType.Star);
-            return;
-        }
-
         first.Width = new GridLength(Math.Max(0, firstValue), GridUnitType.Star);
         second.Width = new GridLength(Math.Max(0, secondValue), GridUnitType.Star);
         third.Width = new GridLength(Math.Max(0, thirdValue), GridUnitType.Star);
@@ -292,17 +313,18 @@ public partial class MainWindow : Window
                 ? (item.Depth == 0 ? "Top-level chat" : $"Subagent {item.Depth}")
                 : DisplayTitle(item.Thread);
             var indent = item.Depth == 0 ? "●" : new string('·', Math.Min(item.Depth, 3));
+            var hasTotal = item.Latest?.HasSessionTotal == true;
             var total = item.Latest?.SessionTotal ?? TokenBreakdown.Empty;
             _threadItems.Add(new ThreadDisplayItem(
                 indent,
                 name,
-                FormatTokens(item.Analysis.Load),
+                FormatContext(item.Analysis),
                 ZoneName(item.Analysis.Zone),
-                FormatTokens(total.InputTokens),
-                FormatTokens(total.CachedInputTokens),
-                FormatTokens(total.OutputTokens),
-                FormatTokens(total.ReasoningOutputTokens),
-                FormatTokens(total.TotalTokens)));
+                FormatMeasuredTokens(total.InputTokens, hasTotal),
+                FormatMeasuredTokens(total.CachedInputTokens, hasTotal),
+                FormatMeasuredTokens(total.OutputTokens, hasTotal),
+                FormatMeasuredTokens(total.ReasoningOutputTokens, hasTotal),
+                FormatMeasuredTokens(total.TotalTokens, hasTotal)));
         }
     }
 
@@ -312,7 +334,7 @@ public partial class MainWindow : Window
         foreach (var chat in snapshot.RecentChats.Take(6))
         {
             var title = DisplayTitle(chat.Root);
-            var context = FormatTokens(chat.Analysis.Load);
+            var context = FormatContext(chat.Analysis);
             var zone = ZoneName(chat.Analysis.Zone);
             _recentItems.Add(new RecentChatDisplayItem(
                 chat.Root.Id,
@@ -335,8 +357,8 @@ public partial class MainWindow : Window
             foreach (var chat in snapshot.SearchableChats)
             {
                 usageById.TryGetValue(chat.Id, out var usage);
-                var context = usage is null ? "—" : FormatTokens(usage.Analysis.Load);
-                var zone = usage?.Analysis.Zone ?? BudgetZone.Healthy;
+                var context = FormatContext(usage?.Analysis);
+                var zone = usage?.Analysis.Zone ?? BudgetZone.Unavailable;
                 _chatItems.Add(new ChatListItem(
                     chat.Id,
                     DisplayTitle(chat),
@@ -356,7 +378,7 @@ public partial class MainWindow : Window
                     chat.Root.Id,
                     DisplayTitle(chat.Root),
                     ZoneName(chat.Analysis.Zone),
-                    FormatTokens(chat.Analysis.Load),
+                    FormatContext(chat.Analysis),
                     ZoneName(chat.Analysis.Zone),
                     FindBrush(ZoneBrushName(chat.Analysis.Zone)),
                     chat.Root.Archived,
@@ -420,7 +442,7 @@ public partial class MainWindow : Window
 
         foreach (var item in candidates)
         {
-            if (item.Thread.Archived)
+            if (item.Thread.Archived || item.Analysis.Zone == BudgetZone.Unavailable)
             {
                 continue;
             }
@@ -628,6 +650,7 @@ public partial class MainWindow : Window
         _settings.MonitoringPaused = !_settings.MonitoringPaused;
         PauseButton.Content = _settings.MonitoringPaused ? "Resume monitoring" : "Pause monitoring";
         _pauseMenu.Checked = _settings.MonitoringPaused;
+        UpdateMonitorStatus();
         if (!_settings.MonitoringPaused)
         {
             _monitor?.RequestRefresh();
@@ -902,6 +925,7 @@ public partial class MainWindow : Window
         }
 
         _quitting = true;
+        _freshnessTimer.Stop();
         _trayIcon.Visible = false;
         _notifications.Dispose();
         _trayIcon.Dispose();
@@ -984,6 +1008,11 @@ public partial class MainWindow : Window
         return $"↑ {FormatTokens(analysis.MedianPositiveDelta)}/event{rate}{estimate}";
     }
 
+    private static string FormatContext(ContextAnalysis? analysis) =>
+        analysis is { Zone: not BudgetZone.Unavailable } ? FormatTokens(analysis.Load) : "—";
+
+    private static string FormatMeasuredTokens(long value, bool available) => available ? FormatTokens(value) : "—";
+
     private static string FormatTokens(long value)
     {
         var absolute = Math.Abs(value);
@@ -1001,6 +1030,7 @@ public partial class MainWindow : Window
         BudgetZone.Caution => "Caution",
         BudgetZone.Critical => "Critical",
         BudgetZone.OverBudget => "Over budget",
+        BudgetZone.Unavailable => "Unavailable",
         _ => "Unknown",
     };
 
@@ -1015,10 +1045,16 @@ public partial class MainWindow : Window
 
     private static System.Windows.Media.Brush FindBrush(string key) => (System.Windows.Media.Brush)System.Windows.Application.Current.Resources[key];
 
-    private static string MakeTrayText(ChatUsage? tracked)
+    private static string MakeTrayText(ChatUsage? tracked, bool stale, bool paused)
     {
-        var value = tracked is null ? "waiting for Codex" : $"{FormatTokens(tracked.Analysis.Load)} context · {ZoneName(tracked.Analysis.Zone)}";
-        var text = $"Token HUD · {value}";
+        var value = tracked?.Analysis.Zone switch
+        {
+            null => "Waiting for Codex",
+            BudgetZone.Unavailable => "Context unavailable",
+            _ => $"{FormatContext(tracked.Analysis)} context · {ZoneName(tracked.Analysis.Zone)}",
+        };
+        var status = stale ? "Stale · " : paused ? "Paused · " : string.Empty;
+        var text = $"Token HUD · {status}{value}";
         return text.Length <= 63 ? text : text[..63];
     }
 

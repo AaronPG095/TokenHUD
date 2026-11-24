@@ -38,12 +38,13 @@ public static class BudgetAnalyzer
 {
     public static ContextAnalysis Analyze(IReadOnlyList<UsageSnapshot> history, BudgetPolicy policy)
     {
-        if (history.Count == 0)
+        var ordered = history.OrderBy(item => item.Timestamp).ToArray();
+        if (ordered.Length == 0 || !ordered[^1].HasContext)
         {
-            return new ContextAnalysis(0, 0, BudgetZone.Healthy, 0, 0, null, null, false, 0, null);
+            return new ContextAnalysis(0, 0, BudgetZone.Unavailable, 0, 0, null, null, false, 0, null);
         }
 
-        var ordered = history.OrderBy(item => item.Timestamp).ToArray();
+        ordered = ordered.Where(item => item.HasContext).ToArray();
         var latest = ordered[^1];
         var load = latest.Context.ContextWindowTokens;
         var deltas = new List<(long Delta, DateTimeOffset At)>();
