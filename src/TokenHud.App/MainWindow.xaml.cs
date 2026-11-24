@@ -35,7 +35,7 @@ public partial class MainWindow : Window
     private readonly System.Windows.Forms.ToolStripMenuItem _topmostMenu;
     private readonly System.Windows.Forms.ToolStripMenuItem _pauseMenu;
     private readonly System.Windows.Forms.ToolStripMenuItem _startupMenu;
-    private readonly WindowsNotificationService _notifications;
+    private readonly WindowsNotificationService? _notifications;
     private HudSnapshot? _snapshot;
     private string _searchText = string.Empty;
     private bool _updatingUi;
@@ -76,7 +76,7 @@ public partial class MainWindow : Window
         _freshnessTimer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(5) };
         _freshnessTimer.Tick += (_, _) => UpdateMonitorStatus();
 
-        _settings.StartWithWindows = StartupRegistration.IsEnabled();
+        _settings.StartWithWindows = !_demo && StartupRegistration.IsEnabled();
         foreach (var (threadId, value) in _settings.AlertStates)
         {
             if (Enum.IsDefined(typeof(AlertState), value))
@@ -101,6 +101,7 @@ public partial class MainWindow : Window
         menu.Items.Add(_privacyMenu);
         menu.Items.Add(_topmostMenu);
         menu.Items.Add(_pauseMenu);
+        _startupMenu.Enabled = !_demo;
         menu.Items.Add(_startupMenu);
         menu.Items.Add(new System.Windows.Forms.ToolStripSeparator());
         menu.Items.Add("Open diagnostics", null, (_, _) => Dispatcher.Invoke(OpenDiagnostics));
@@ -112,15 +113,18 @@ public partial class MainWindow : Window
         {
             Icon = System.Drawing.SystemIcons.Information,
             Text = "Token HUD",
-            Visible = true,
+            Visible = !_demo,
             ContextMenuStrip = menu,
         };
         _trayIcon.DoubleClick += (_, _) => Dispatcher.Invoke(ShowFromTray);
         _trayIcon.BalloonTipClicked += (_, _) => Dispatcher.Invoke(ShowFromTray);
-        _notifications = new WindowsNotificationService(() => Dispatcher.Invoke(ShowFromTray), diagnostics);
-
-        if (!_demo)
+        if (_demo)
         {
+            Title = "Token HUD Demo";
+        }
+        else
+        {
+            _notifications = new WindowsNotificationService(() => Dispatcher.Invoke(ShowFromTray), diagnostics);
             var paths = new CodexPaths();
             var builder = new SnapshotBuilder(new CodexCatalog(paths), new UsageCache(new RolloutReader()));
             _monitor = new HudMonitor(builder, diagnostics, GetMonitorOptions, paths);
@@ -206,7 +210,7 @@ public partial class MainWindow : Window
             UpdateQuota(snapshot.Quota);
             UpdateRecentList(snapshot);
             UpdateChatList(snapshot);
-            CompactBudgetLabel.Text = $"CONTEXT / {FormatTokens(_settings.ContextBudget)}";
+            CompactBudgetLabel.Text = $"CONTEXT LOAD / {FormatTokens(_settings.ContextBudget)}";
             UpdateMonitorStatus();
             CheckAlerts(snapshot);
         }
@@ -330,20 +334,39 @@ public partial class MainWindow : Window
 
     private void UpdateRecentList(HudSnapshot snapshot)
     {
-        _recentItems.Clear();
+        var itemsById = _recentItems.ToDictionary(item => item.Id, StringComparer.Ordinal);
+        var index = 0;
         foreach (var chat in snapshot.RecentChats.Take(6))
         {
             var title = DisplayTitle(chat.Root);
             var context = FormatContext(chat.Analysis);
             var zone = ZoneName(chat.Analysis.Zone);
-            _recentItems.Add(new RecentChatDisplayItem(
-                chat.Root.Id,
-                title,
-                context,
-                zone,
-                FindBrush(ZoneBrushName(chat.Analysis.Zone)),
-                $"{title}, {context} context, {zone}"));
+            var item = itemsById.GetValueOrDefault(chat.Root.Id) ?? new RecentChatDisplayItem(chat.Root.Id);
+            item.Update(title, context, zone, FindBrush(ZoneBrushName(chat.Analysis.Zone)),
+                chat.Analysis.Zone == BudgetZone.Unavailable
+                    ? $"{title}, context load unavailable"
+                    : $"{title}, {context} context load, {zone}");
+
+            var previousIndex = _recentItems.IndexOf(item);
+            if (previousIndex < 0)
+            {
+                _recentItems.Insert(index, item);
+            }
+            else if (previousIndex != index)
+            {
+                _recentItems.Move(previousIndex, index);
+            }
+
+            index++;
         }
+
+        while (_recentItems.Count > index)
+        {
+            _recentItems.RemoveAt(_recentItems.Count - 1);
+        }
+
+        EmptyChatsLabel.Visibility = index == 0 ? Visibility.Visible : Visibility.Collapsed;
+        EmptyChatsLabel.Text = "No local Codex chats found";
     }
 
     private void UpdateChatList(HudSnapshot snapshot)
@@ -397,7 +420,7 @@ public partial class MainWindow : Window
         var fiveHourText = fiveHour is null ? "—" : $"{fiveHour.RemainingPercent:0}% left";
         var weeklyText = weekly is null ? "—" : $"{weekly.RemainingPercent:0}% left";
 
-        QuotaSummaryLabel.Text = $"QUOTA   5h {fiveHourText}   ·   Weekly {weeklyText}";
+        QuotaSummaryLabel.Text = $"Account quota   5h {fiveHourText}   ·   Weekly {weeklyText}";
         QuotaSummaryLabel.ToolTip = string.Join(Environment.NewLine, new[]
         {
             FormatQuotaReset("Five-hour", fiveHour),
@@ -420,7 +443,7 @@ public partial class MainWindow : Window
 
     private void CheckAlerts(HudSnapshot snapshot)
     {
-        if (!_settings.NotificationsEnabled)
+        if (_demo || !_settings.NotificationsEnabled)
         {
             return;
         }
@@ -496,7 +519,7 @@ public partial class MainWindow : Window
         var chatName = _settings.PrivacyMode ? (item.Thread.IsSubagent ? "A subagent" : "A Codex chat") : DisplayTitle(item.Thread);
         var title = overBudget ? "Token HUD · Context budget reached" : "Token HUD · Critical context";
         var message = $"{chatName} is at {FormatTokens(item.Analysis.Load)} of {FormatTokens(_settings.ContextBudget)}. Open Token HUD to review it.";
-        if (!_notifications.TryShow(title, message, item.Thread.Id))
+        if (_notifications?.TryShow(title, message, item.Thread.Id) != true)
         {
             _trayIcon.ShowBalloonTip(7_000, title, message, System.Windows.Forms.ToolTipIcon.Warning);
         }
@@ -670,7 +693,7 @@ public partial class MainWindow : Window
         }
         catch
         {
-            _settings.StartWithWindows = StartupRegistration.IsEnabled();
+            _settings.StartWithWindows = !_demo && StartupRegistration.IsEnabled();
             _startupMenu.Checked = _settings.StartWithWindows;
             _ = _diagnostics.WriteAsync("startup_registration_failed", DiagnosticLevel.Warning);
         }
@@ -690,7 +713,17 @@ public partial class MainWindow : Window
 
     private void PrivacyButton_Click(object sender, RoutedEventArgs e) => TogglePrivacy();
     private void ExpandButton_Click(object sender, RoutedEventArgs e) => ToggleExpanded();
-    private void HideButton_Click(object sender, RoutedEventArgs e) => Hide();
+    private async void HideButton_Click(object sender, RoutedEventArgs e)
+    {
+        if (_demo)
+        {
+            await QuitAsync();
+        }
+        else
+        {
+            Hide();
+        }
+    }
 
     private void PauseButton_Click(object sender, RoutedEventArgs e) => TogglePause();
 
@@ -888,6 +921,11 @@ public partial class MainWindow : Window
 
     private void ScheduleSave()
     {
+        if (_demo)
+        {
+            return;
+        }
+
         _saveTimer.Stop();
         _saveTimer.Start();
     }
@@ -927,19 +965,30 @@ public partial class MainWindow : Window
         _quitting = true;
         _freshnessTimer.Stop();
         _trayIcon.Visible = false;
-        _notifications.Dispose();
+        _notifications?.Dispose();
         _trayIcon.Dispose();
         if (_monitor is not null)
         {
             await _monitor.DisposeAsync();
         }
 
-        await _settingsStore.SaveAsync(_settings);
+        if (!_demo)
+        {
+            await _settingsStore.SaveAsync(_settings);
+        }
+
         System.Windows.Application.Current.Shutdown();
     }
 
     private void Window_Closing(object? sender, CancelEventArgs e)
     {
+        if (_demo && !_quitting)
+        {
+            e.Cancel = true;
+            _ = Dispatcher.InvokeAsync(QuitAsync, DispatcherPriority.Background);
+            return;
+        }
+
         if (_quitting)
         {
             return;

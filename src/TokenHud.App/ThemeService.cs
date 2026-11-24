@@ -16,52 +16,64 @@ internal sealed class ThemeService : IDisposable
 
     public void Apply()
     {
-        if (SystemParameters.HighContrast)
+        var highContrast = SystemParameters.HighContrast;
+        ApplyPalette(highContrast, !highContrast && ReadDarkMode());
+    }
+
+    internal void ApplyPalette(bool highContrast, bool isDark)
+    {
+        if (highContrast)
         {
             Set("CanvasBrush", System.Windows.SystemColors.WindowColor);
-            Set("SurfaceBrush", System.Windows.SystemColors.ControlColor);
-            Set("SurfaceStrongBrush", System.Windows.SystemColors.ControlDarkColor);
+            Set("SurfaceBrush", System.Windows.SystemColors.WindowColor);
+            Set("SurfaceStrongBrush", System.Windows.SystemColors.WindowColor);
             Set("InkBrush", System.Windows.SystemColors.WindowTextColor);
-            Set("MutedBrush", System.Windows.SystemColors.GrayTextColor);
+            Set("MutedBrush", System.Windows.SystemColors.WindowTextColor);
             Set("PrimaryBrush", System.Windows.SystemColors.HighlightColor);
             Set("AccentBrush", System.Windows.SystemColors.HighlightColor);
+            Set("OnPrimaryBrush", System.Windows.SystemColors.HighlightTextColor);
+            Set("DividerBrush", System.Windows.SystemColors.WindowTextColor);
             Set("HealthyBrush", System.Windows.SystemColors.WindowTextColor);
             Set("CautionBrush", System.Windows.SystemColors.WindowTextColor);
-            Set("CriticalBrush", System.Windows.SystemColors.HotTrackColor);
-            Set("OverBudgetBrush", System.Windows.SystemColors.HotTrackColor);
+            Set("CriticalBrush", System.Windows.SystemColors.WindowTextColor);
+            Set("OverBudgetBrush", System.Windows.SystemColors.WindowTextColor);
             IsDark = false;
             return;
         }
 
-        IsDark = ReadDarkMode();
+        IsDark = isDark;
         var palette = IsDark
             ? new Dictionary<string, string>
             {
-                ["CanvasBrush"] = "#030303",
-                ["SurfaceBrush"] = "#0C0D11",
-                ["SurfaceStrongBrush"] = "#191A20",
-                ["InkBrush"] = "#EAEBF2",
-                ["MutedBrush"] = "#9C9DAB",
-                ["PrimaryBrush"] = "#9499FA",
-                ["AccentBrush"] = "#59C8E8",
-                ["HealthyBrush"] = "#57BC80",
-                ["CautionBrush"] = "#F3B94C",
-                ["CriticalBrush"] = "#FF7C63",
-                ["OverBudgetBrush"] = "#FC5855",
+                ["CanvasBrush"] = "#09090B",
+                ["SurfaceBrush"] = "#18181B",
+                ["SurfaceStrongBrush"] = "#27272A",
+                ["InkBrush"] = "#FAFAFA",
+                ["MutedBrush"] = "#A1A1AA",
+                ["PrimaryBrush"] = "#65B8FF",
+                ["AccentBrush"] = "#78C2FF",
+                ["OnPrimaryBrush"] = "#09090B",
+                ["DividerBrush"] = "#27272A",
+                ["HealthyBrush"] = "#86EFAC",
+                ["CautionBrush"] = "#FCD34D",
+                ["CriticalBrush"] = "#FDBA74",
+                ["OverBudgetBrush"] = "#FCA5A5",
             }
             : new Dictionary<string, string>
             {
-                ["CanvasBrush"] = "#FFFFFF",
-                ["SurfaceBrush"] = "#F2F3F7",
-                ["SurfaceStrongBrush"] = "#E4E5EE",
-                ["InkBrush"] = "#181926",
-                ["MutedBrush"] = "#5A5C6C",
-                ["PrimaryBrush"] = "#5552BB",
-                ["AccentBrush"] = "#2FB5D8",
-                ["HealthyBrush"] = "#1C985A",
-                ["CautionBrush"] = "#D59800",
-                ["CriticalBrush"] = "#E5462C",
-                ["OverBudgetBrush"] = "#CD001D",
+                ["CanvasBrush"] = "#FAFAFA",
+                ["SurfaceBrush"] = "#F4F4F5",
+                ["SurfaceStrongBrush"] = "#E4E4E7",
+                ["InkBrush"] = "#09090B",
+                ["MutedBrush"] = "#52525B",
+                ["PrimaryBrush"] = "#005FA8",
+                ["AccentBrush"] = "#0067B5",
+                ["OnPrimaryBrush"] = "#FAFAFA",
+                ["DividerBrush"] = "#E4E4E7",
+                ["HealthyBrush"] = "#166534",
+                ["CautionBrush"] = "#854D0E",
+                ["CriticalBrush"] = "#9A3412",
+                ["OverBudgetBrush"] = "#B91C1C",
             };
 
         foreach (var (key, value) in palette)
@@ -83,8 +95,15 @@ internal sealed class ThemeService : IDisposable
 
     private static void Set(string key, System.Windows.Media.Color color)
     {
-        var brush = new SolidColorBrush(color);
-        brush.Freeze();
-        System.Windows.Application.Current.Resources[key] = brush;
+        var resources = System.Windows.Application.Current.Resources;
+        if (resources[key] is SolidColorBrush { IsFrozen: false } brush)
+        {
+            // Code-behind and existing chat rows can hold references to this brush.
+            brush.Color = color;
+        }
+        else
+        {
+            resources[key] = new SolidColorBrush(color);
+        }
     }
 }

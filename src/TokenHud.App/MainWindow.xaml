@@ -23,7 +23,7 @@
         SourceInitialized="Window_SourceInitialized"
         StateChanged="Window_StateChanged"
         KeyDown="Window_KeyDown">
-    <Border BorderBrush="{DynamicResource SurfaceStrongBrush}" BorderThickness="1" Background="{DynamicResource CanvasBrush}">
+    <Border BorderBrush="{DynamicResource DividerBrush}" BorderThickness="1" Background="{DynamicResource CanvasBrush}">
         <Grid>
             <Grid.RowDefinitions>
                 <RowDefinition Height="42" />
@@ -79,13 +79,13 @@
             <Border x:Name="CompactPanel" Grid.Row="1" Margin="12,2,12,12" Background="{DynamicResource SurfaceBrush}" CornerRadius="10">
                 <Grid>
                     <Grid.RowDefinitions>
-                        <RowDefinition Height="32" />
+                        <RowDefinition Height="30" />
                         <RowDefinition Height="*" />
-                        <RowDefinition Height="34" />
+                        <RowDefinition Height="32" />
                     </Grid.RowDefinitions>
-                    <Grid Grid.Row="0" Margin="12,0">
+                    <Grid Grid.Row="0" Margin="14,0">
                         <TextBlock Text="RECENT CHATS" Style="{StaticResource MutedText}" FontSize="10.5" FontWeight="SemiBold" VerticalAlignment="Center" />
-                        <TextBlock x:Name="CompactBudgetLabel" Text="CONTEXT / 150k" Style="{StaticResource MutedText}" FontSize="10.5"
+                        <TextBlock x:Name="CompactBudgetLabel" Text="CONTEXT LOAD / 150k" Style="{StaticResource MutedText}" FontSize="10.5"
                                    FontWeight="SemiBold" HorizontalAlignment="Right" VerticalAlignment="Center" />
                     </Grid>
 
@@ -93,27 +93,44 @@
                         <ItemsControl.ItemTemplate>
                             <DataTemplate>
                                 <Button Style="{StaticResource CompactChatRow}" Tag="{Binding Id}" Click="RecentChatButton_Click"
-                                        ToolTip="{Binding Title}" automation:AutomationProperties.Name="{Binding AutomationName}">
+                                        ToolTipService.ShowsToolTipOnKeyboardFocus="True"
+                                        automation:AutomationProperties.Name="{Binding AutomationName}">
+                                    <Button.ToolTip>
+                                        <ToolTip Content="{Binding PlacementTarget.DataContext.Title, RelativeSource={RelativeSource Self}}"
+                                                 MaxWidth="420">
+                                            <ToolTip.ContentTemplate>
+                                                <DataTemplate>
+                                                    <TextBlock Text="{Binding}" TextWrapping="Wrap" />
+                                                </DataTemplate>
+                                            </ToolTip.ContentTemplate>
+                                        </ToolTip>
+                                    </Button.ToolTip>
                                     <Grid>
                                         <Grid.ColumnDefinitions>
-                                            <ColumnDefinition Width="Auto" />
                                             <ColumnDefinition Width="*" />
-                                            <ColumnDefinition Width="Auto" />
+                                            <ColumnDefinition Width="77" />
+                                            <ColumnDefinition Width="54" />
                                         </Grid.ColumnDefinitions>
-                                        <Ellipse Width="7" Height="7" Fill="{Binding ZoneBrush}" Margin="2,0,9,0" VerticalAlignment="Center" />
-                                        <TextBlock Grid.Column="1" Text="{Binding Title}" FontSize="12.5" FontWeight="Medium"
-                                                   TextWrapping="Wrap" TextTrimming="CharacterEllipsis" MaxHeight="34" VerticalAlignment="Center" />
-                                        <TextBlock Grid.Column="2" Text="{Binding Context}" FontSize="12" FontWeight="SemiBold"
-                                                   Margin="12,0,3,0" VerticalAlignment="Center" />
+                                        <TextBlock Text="{Binding Title}" FontSize="12.5" FontWeight="Medium" Margin="0,0,9,0"
+                                                   LineHeight="15" LineStackingStrategy="BlockLineHeight" MaxHeight="31"
+                                                   TextWrapping="Wrap" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" />
+                                        <TextBlock Grid.Column="1" Text="{Binding Zone}" Foreground="{Binding ZoneBrush}" FontSize="11"
+                                                   FontWeight="SemiBold" VerticalAlignment="Center" />
+                                        <TextBlock Grid.Column="2" Text="{Binding Context}" TextAlignment="Right" FontSize="12"
+                                                   FontWeight="SemiBold" Typography.NumeralAlignment="Tabular" VerticalAlignment="Center" />
                                     </Grid>
                                 </Button>
                             </DataTemplate>
                         </ItemsControl.ItemTemplate>
                     </ItemsControl>
+                    <TextBlock x:Name="EmptyChatsLabel" Grid.Row="1" Text="Waiting for a local refresh"
+                               Style="{StaticResource MutedText}" FontSize="12.5" Margin="14,0"
+                               HorizontalAlignment="Center" VerticalAlignment="Center"
+                               automation:AutomationProperties.LiveSetting="Polite" />
 
-                    <Border Grid.Row="2" BorderBrush="{DynamicResource SurfaceStrongBrush}" BorderThickness="0,1,0,0">
-                        <TextBlock x:Name="QuotaSummaryLabel" Text="QUOTA   5h —   ·   Weekly —" Style="{StaticResource MutedText}"
-                                   Margin="12,0" VerticalAlignment="Center" FontSize="10.5"
+                    <Border Grid.Row="2" BorderBrush="{DynamicResource DividerBrush}" BorderThickness="0,1,0,0">
+                        <TextBlock x:Name="QuotaSummaryLabel" Text="Account quota   5h —   ·   Weekly —" Style="{StaticResource MutedText}"
+                                   Margin="14,0" VerticalAlignment="Center" FontSize="11"
                                    automation:AutomationProperties.Name="Account quota unavailable" />
                     </Border>
                 </Grid>

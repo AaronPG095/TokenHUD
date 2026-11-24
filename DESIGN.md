@@ -2,50 +2,36 @@
 
 ## Direction
 
-**Precision instrument at the edge of attention.** Token HUD should feel like a small native Windows instrument: matte surfaces, disciplined density, and a measured indigo signal. It is designed for peripheral monitoring beside Codex, not prolonged dashboard use.
+Token HUD is a compact Windows instrument for monitoring context beside Codex. Matte zinc surfaces and restrained Windows blue accents align it with Fluent Studio.
 
 - Restraint: one primary context meter, quiet supporting numbers, no decorative charts.
 - Hierarchy: context load first; account quota always separate.
-- Semantic color: budget state owns the meter color. Brand indigo is reserved for focus, selection, and small active-state details.
+- Semantic color: budget state owns the meter color. Windows blue identifies focus, selection, and informational accents.
 - Native behavior: Windows theme, high contrast, scaling, keyboard navigation, tray conventions, and reduced motion all take precedence over visual novelty.
 
 ## Color
 
-OKLCH values are the design source of truth. The hex values are the clipped sRGB implementation colors used by WPF.
+The WPF resource names below end in `Brush`. Windows blue (`#0078D4`) anchors the accent family. The light foregrounds are deeper blues for legibility on zinc, and the dark foregrounds use lighter tints.
 
-### Light
+| Token | Light | Dark | Use |
+|---|---|---|---|
+| `Canvas` | `#FAFAFA` | `#09090B` | Window background |
+| `Surface` | `#F4F4F5` | `#18181B` | List and panel surfaces |
+| `SurfaceStrong` | `#E4E4E7` | `#27272A` | Control fills and meter tracks |
+| `Divider` | `#E4E4E7` | `#27272A` | Borders and separators |
+| `Ink` | `#09090B` | `#FAFAFA` | Primary text |
+| `Muted` | `#52525B` | `#A1A1AA` | Supporting text |
+| `Primary` | `#005FA8` | `#65B8FF` | Focus, selection and active controls |
+| `OnPrimary` | `#FAFAFA` | `#09090B` | Check mark on a primary fill |
+| `Accent` | `#0067B5` | `#78C2FF` | Informational accents |
+| `Healthy` | `#166534` | `#86EFAC` | Below 100k |
+| `Caution` | `#854D0E` | `#FCD34D` | 100k–124,999 |
+| `Critical` | `#9A3412` | `#FDBA74` | 125k–149,999 |
+| `OverBudget` | `#B91C1C` | `#FCA5A5` | 150k and above |
 
-| Token | OKLCH | sRGB | Use |
-|---|---:|---:|---|
-| `Canvas` | `oklch(1 0 0)` | `#FFFFFF` | Window background |
-| `Surface` | `oklch(0.965 0.006 280)` | `#F2F3F7` | Cards and list rows |
-| `SurfaceStrong` | `oklch(0.925 0.012 280)` | `#E4E5EE` | Dividers and controls |
-| `Ink` | `oklch(0.22 0.025 280)` | `#181926` | Primary text |
-| `Muted` | `oklch(0.48 0.025 280)` | `#5A5C6C` | Supporting text |
-| `Primary` | `oklch(0.50 0.16 280)` | `#5552BB` | Selection and focus |
-| `Accent` | `oklch(0.72 0.12 220)` | `#2FB5D8` | Informational state only |
-| `Healthy` | `oklch(0.60 0.14 155)` | `#1C985A` | Below 100k |
-| `Caution` | `oklch(0.72 0.15 80)` | `#D59800` | 100k–124,999 |
-| `Critical` | `oklch(0.62 0.20 32)` | `#E5462C` | 125k–149,999 |
-| `OverBudget` | `oklch(0.53 0.22 25)` | `#CD001D` | 150k and above |
+Text and semantic foregrounds maintain at least 4.5:1 contrast on the three theme surfaces. Labels and accessible names carry Budget Zone meaning alongside color. Focus rings overlay controls without changing their measured size.
 
-### Dark
-
-| Token | OKLCH | sRGB | Use |
-|---|---:|---:|---|
-| `Canvas` | `oklch(0.10 0 0)` | `#030303` | Window background |
-| `Surface` | `oklch(0.16 0.008 280)` | `#0C0D11` | Cards and list rows |
-| `SurfaceStrong` | `oklch(0.22 0.012 280)` | `#191A20` | Dividers and controls |
-| `Ink` | `oklch(0.94 0.01 280)` | `#EAEBF2` | Primary text |
-| `Muted` | `oklch(0.70 0.02 280)` | `#9C9DAB` | Supporting text |
-| `Primary` | `oklch(0.72 0.14 280)` | `#9499FA` | Selection and focus |
-| `Accent` | `oklch(0.78 0.11 220)` | `#59C8E8` | Informational state only |
-| `Healthy` | `oklch(0.72 0.13 155)` | `#57BC80` | Below 100k |
-| `Caution` | `oklch(0.82 0.14 80)` | `#F3B94C` | 100k–124,999 |
-| `Critical` | `oklch(0.74 0.17 32)` | `#FF7C63` | 125k–149,999 |
-| `OverBudget` | `oklch(0.68 0.20 25)` | `#FC5855` | 150k and above |
-
-Text and interactive foregrounds must maintain WCAG AA contrast. Semantic colors are never the only carrier of meaning: every state is named and exposed to assistive technology.
+Windows High Contrast uses `Window` for surfaces, `WindowText` for copy, dividers and Budget Zone indicators, and `Highlight` with `HighlightText` for emphasis and selected controls.
 
 ## Typography
 
@@ -76,9 +62,9 @@ The compact view is list-first and contains only:
 
 Session Consumption and Highest Child are removed from the entire interface. Context Velocity, Token Spike, forecasts, and secondary badges are excluded from Compact View. Compact View has no selected or pinned row and therefore no previous/next or pin controls. Its title strip retains only privacy, expand, and hide. Double-clicking the strip toggles compact/expanded.
 
-Each Recent Chat List row uses a compact 12.5–13px Chat Name that normally fits on one line but may wrap to a second line. Rows cap names at two lines and ellipsize only beyond that boundary. A Budget Zone dot and exact Context Load remain aligned at the row's trailing edge; complete names and metrics are available to assistive technology and on hover.
+Each Recent Chat List row uses a compact 12.5–13px Chat Name that normally fits on one line but may wrap to a second line. Rows cap names at two lines and ellipsize only beyond that boundary. A short Budget Zone label and the Context Load stay aligned in separate trailing columns. The full chat title is available on hover, on keyboard focus, and to assistive technology. Privacy Mode masks each presentation.
 
-The list header names the shared budget once as `CONTEXT / 150k`. Individual rows show only their own Context Load, avoiding six repeated budget values and preserving width for Chat Names.
+The list header names the shared budget once as `CONTEXT LOAD / 150k`. Individual rows show only their own Context Load, avoiding six repeated budget values and preserving width for Chat Names.
 
 Recent Chat List rows are read-only overview entries. Activating a row opens that chat's detail in Expanded View; selection, search, historical chats, and deeper inspection do not occupy the compact surface.
 
@@ -86,7 +72,7 @@ List ordering uses the latest activity anywhere in each Chat Tree. A newly activ
 
 Budget severity never changes Recent Chat List ordering or membership. Critical and Over Budget chats retain their recency position; threshold notifications carry risk outside the six-row overview, and older risky chats remain available in Expanded View.
 
-Account Quota uses one footer line: `QUOTA  5h —  ·  Weekly 68% left`. It has no progress bars. Reset times remain available on hover, and an unreported window remains `—` rather than borrowing another window's value.
+Account Quota uses one footer line: `Account quota  5h —  ·  Weekly 68% left`. It has no progress bars. Reset times remain available on hover, and an unreported window remains `—` rather than borrowing another window's value.
 
 ## Expanded view
 
