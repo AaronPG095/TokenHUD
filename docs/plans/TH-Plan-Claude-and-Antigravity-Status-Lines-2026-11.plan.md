@@ -1,7 +1,7 @@
 ---
 title: Plan - Feature: Claude and Antigravity Status Lines
 ticket: https://app.notion.com/p/TH-Plan-Feature-Claude-and-Antigravity-Status-Lines-4220b9c6786f81249113e8ab66b07b35
-status: in-progress
+status: shipped
 appetite: L
 impact: minor
 devTicketKey: TH:TH-Plan-Claude-and-Antigravity-Status-Lines-2026-11
@@ -14,6 +14,7 @@ reviewSession: /root/compact_qa_plan
 reviewModel: gpt-6.2-sol
 baseBranch: main
 reviewFingerprint: 32186a09bc83d0de8b482ac069e2e84623a4a721918135dd8db9ef81faf1948d
+pr: https://github.com/AaronPG095/TokenHUD/pull/19
 ---
 # Claude and Antigravity Status Lines
 
