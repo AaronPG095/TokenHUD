@@ -8,6 +8,8 @@ var tests = new List<(string Name, Func<Task> Run)>
     ("preserves settings across cancelled and concurrent saves", SettingsStoreFixtures.VerifyInterruptedAndOverlappingSavesAsync),
     ("imports allowlisted local provider readings", ProviderTelemetryFixtures.RunAsync),
     ("projects Claude Code and Antigravity status lines", VendorStatusLineFixtures.RunAsync),
+    ("imports Cursor historical context and request usage", CursorTelemetryFixtures.RunAsync),
+    ("imports measured API usage without claiming current context", ApiUsageImportFixtures.RunAsync),
     ("enforces budget boundaries", BudgetBoundariesAsync),
     ("resolves inherited budgets against current model limits", ContextBudgetTests.ResolvesHierarchyAndReportedLimitsAsync),
     ("deduplicates zone alerts and respects cooldown and snooze", BudgetAlertTests.RunAsync),
