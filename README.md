@@ -77,4 +77,6 @@ $smokeRoot = Join-Path ([IO.Path]::GetTempPath()) ("TokenHUD-smoke-" + [Guid]::N
 
 ## Current boundary
 
+The Expanded inspector also has an **AI sources** panel for explicitly connected local metrics feeds. See [provider telemetry](docs/provider-telemetry.md) for the schema and what each field means.
+
 The current Codex integration is local-only and read-only. Codex exposes `thread/compact/start` through its app-server protocol, but the desktop app does not publish a supported control endpoint that this companion can safely attach to. A future compaction action belongs behind a provider capability interface and must fail closed when a supported active-server connection is unavailable.

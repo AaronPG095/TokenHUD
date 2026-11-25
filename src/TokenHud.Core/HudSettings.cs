@@ -36,12 +36,14 @@ public sealed class AppDataPaths
         Settings = Path.Combine(Root, "settings.json");
         Diagnostics = Path.Combine(Root, "diagnostics");
         MetricsHistory = Path.Combine(Root, "metrics-history.sqlite");
+        ProviderTelemetry = Path.Combine(Root, "provider-telemetry");
     }
 
     public string Root { get; }
     public string Settings { get; }
     public string Diagnostics { get; }
     public string MetricsHistory { get; }
+    public string ProviderTelemetry { get; }
 }
 
 public sealed class SettingsStore
