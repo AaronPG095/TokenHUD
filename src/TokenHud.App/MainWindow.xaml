@@ -376,13 +376,25 @@
                                     <TextBlock x:Name="RefreshLabel" Text="—" Style="{StaticResource MutedText}" TextWrapping="Wrap" />
                                 </StackPanel>
 
-                                <Expander Header="AI sources" Margin="0,16,0,0" Expanded="ProviderSources_Expanded">
+                                <Expander Header="AI sources" Foreground="{DynamicResource InkBrush}" Margin="0,16,0,0" Expanded="ProviderSources_Expanded">
                                     <ItemsControl x:Name="ProviderSources" AutomationProperties.Name="Connected AI sources" Margin="4,8,2,0">
                                         <ItemsControl.ItemTemplate>
                                             <DataTemplate>
                                                 <StackPanel Margin="0,0,0,10">
                                                     <TextBlock Text="{Binding Title}" FontWeight="SemiBold" FontSize="12" TextWrapping="Wrap" />
                                                     <TextBlock Text="{Binding Detail}" Style="{StaticResource MutedText}" TextWrapping="Wrap" />
+                                                    <Button Content="Usage help" Tag="{Binding Link}" Click="OpenProviderHelp_Click" automation:AutomationProperties.Name="{Binding Title, StringFormat={}{0} usage help}"
+                                                            HorizontalAlignment="Left" Margin="0,4,0,0">
+                                                        <Button.Style>
+                                                            <Style TargetType="Button" BasedOn="{StaticResource QuietButton}">
+                                                                <Style.Triggers>
+                                                                    <DataTrigger Binding="{Binding Link}" Value="{x:Null}">
+                                                                        <Setter Property="Visibility" Value="Collapsed" />
+                                                                    </DataTrigger>
+                                                                </Style.Triggers>
+                                                            </Style>
+                                                        </Button.Style>
+                                                    </Button>
                                                 </StackPanel>
                                             </DataTemplate>
                                         </ItemsControl.ItemTemplate>

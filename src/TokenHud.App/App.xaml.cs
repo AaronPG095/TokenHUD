@@ -21,6 +21,12 @@ public partial class App : System.Windows.Application
             return;
         }
 
+        if (TryHandleUsageCommand(e.Args, out var usageExitCode))
+        {
+            Shutdown(usageExitCode);
+            return;
+        }
+
         if (e.Args.Length == 1 && e.Args[0].Equals("--ingest-provider", StringComparison.OrdinalIgnoreCase))
         {
             using var input = Console.OpenStandardInput();

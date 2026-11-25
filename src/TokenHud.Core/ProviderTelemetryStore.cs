@@ -44,6 +44,11 @@ public sealed class ProviderTelemetryStore
             // Keep the comparison and replace in one critical section across ingest processes.
             using var writeGate = await AcquireWriteGateAsync(cancellationToken).ConfigureAwait(false);
             var previous = await ReadFileAsync(path, now, cancellationToken).ConfigureAwait(false);
+            if (previous is null && reading.SourceId == "cursor" && ReadingFileName(reading) != LegacyFileName(reading))
+            {
+                previous = await ReadFileAsync(Path.Combine(_directory, LegacyFileName(reading)), now, cancellationToken)
+                    .ConfigureAwait(false);
+            }
             if (previous is not null && previous.ObservedAt >= reading.ObservedAt)
             {
                 return ProviderImportResult.Imported;
@@ -95,7 +100,7 @@ public sealed class ProviderTelemetryStore
         try
         {
             var directory = new DirectoryInfo(_directory);
-            foreach (var source in SourceIds)
+            foreach (var source in SourceIds.Concat(["cursor.historical", "cursor.usage"]))
             {
                 var prefix = source + ".";
                 var candidates = directory.EnumerateFiles(prefix + "*.json")
@@ -108,7 +113,7 @@ public sealed class ProviderTelemetryStore
                 {
                     cancellationToken.ThrowIfCancellationRequested();
                     var reading = await ReadFileAsync(file.FullName, now, cancellationToken).ConfigureAwait(false);
-                    if (reading is not null && file.Name == ReadingFileName(reading))
+                    if (reading is not null && (file.Name == ReadingFileName(reading) || file.Name == LegacyFileName(reading)))
                     {
                         recent.Add(reading);
                     }
@@ -120,10 +125,28 @@ public sealed class ProviderTelemetryStore
             // Return usable readings collected before an inaccessible directory or metadata change.
         }
 
-        return recent.OrderByDescending(reading => reading.ObservedAt).ToArray();
+        return recent.OrderByDescending(reading => reading.ObservedAt)
+            .DistinctBy(reading => (reading.SourceId, reading.SessionKey)).ToArray();
     }
 
-    private static string ReadingFileName(ProviderReading reading) => $"{reading.SourceId}.{reading.SessionKey}.json";
+    private static string LegacyFileName(ProviderReading reading) => $"{reading.SourceId}.{reading.SessionKey}.json";
+
+    private static string ReadingFileName(ProviderReading reading)
+    {
+        if (reading.SourceId == "cursor" && reading.CurrentContext is null)
+        {
+            if (reading.HistoricalContext is not null && reading.LatestExchange is null)
+            {
+                return $"cursor.historical.{reading.SessionKey}.json";
+            }
+            if (reading.HistoricalContext is null && reading.LatestExchange is not null)
+            {
+                return $"cursor.usage.{reading.SessionKey}.json";
+            }
+        }
+
+        return LegacyFileName(reading);
+    }
 
     private async Task<FileStream> AcquireWriteGateAsync(CancellationToken cancellationToken)
     {

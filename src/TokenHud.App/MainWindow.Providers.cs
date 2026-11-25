@@ -15,9 +15,35 @@ public partial class MainWindow
         ("claude-code", "Claude Code", "Context and account quota when reported by the local status line."),
         ("antigravity", "Google Antigravity CLI", "Provider-reported context and quota when available."),
         ("cursor", "Cursor", "Pre-compaction context snapshots and imported usage."),
-        ("openai-api", "OpenAI API", "Reported usage from connected applications. Regular ChatGPT chats have no live context feed."),
-        ("gemini-api", "Gemini API", "Reported usage from connected applications. Gemini Apps chats have no live context feed."),
+        ("openai-api", "OpenAI API", "Request usage from locally connected OpenAI API applications."),
+        ("gemini-api", "Gemini API", "Request usage from locally connected Gemini API applications."),
     ];
+
+    private static readonly ProviderRow[] ConsumerProviders =
+    [
+        new("ChatGPT", "Live context from ordinary ChatGPT chats is unavailable. Review account usage in ChatGPT.", new Uri("https://help.openai.com/en/articles/20001625-understanding-chatgpt-and-codex-usage-limits")),
+        new("Claude", "Live context from claude.ai chats is unavailable. The Claude Code feed can report shared account limits when provided.", new Uri("https://support.claude.com/en/articles/11647753-how-do-usage-and-length-limits-work")),
+        new("Gemini Apps", "Live context from Gemini Apps chats is unavailable. See Google’s account limits guidance.", new Uri("https://support.google.com/gemini/answer/16275805")),
+    ];
+
+    private void OpenProviderHelp_Click(object sender, RoutedEventArgs e)
+    {
+        if (sender is not System.Windows.Controls.Button { Tag: Uri link } ||
+            !ConsumerProviders.Any(provider => provider.Link == link))
+        {
+            return;
+        }
+
+        try
+        {
+            System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(link.AbsoluteUri) { UseShellExecute = true });
+        }
+        catch (System.ComponentModel.Win32Exception)
+        {
+            System.Windows.MessageBox.Show(this, "The usage help page could not be opened.",
+                "Token HUD", MessageBoxButton.OK, MessageBoxImage.Information);
+        }
+    }
 
     private void ProviderSources_Expanded(object sender, RoutedEventArgs e)
     {
@@ -59,13 +85,18 @@ public partial class MainWindow
     private static ProviderRow[] BuildProviderRows(IReadOnlyList<ProviderReading> readings, DateTimeOffset now) =>
         ProviderDescriptions.Select(provider =>
         {
-            var sessions = readings.Where(reading => reading.SourceId == provider.Id)
-                .OrderByDescending(reading => reading.ObservedAt).Take(3).ToArray();
+            var byRecency = readings.Where(reading => reading.SourceId == provider.Id)
+                .OrderByDescending(reading => reading.ObservedAt).ToArray();
+            var sessions = provider.Id == "cursor"
+                ? byRecency.Where(reading => reading.HistoricalContext is not null).Take(2)
+                    .Concat(byRecency.Where(reading => reading.LatestExchange is not null).Take(2))
+                    .Concat(byRecency.Take(1)).DistinctBy(reading => reading.SessionKey).ToArray()
+                : byRecency.Take(3).ToArray();
             var detail = sessions.Length == 0
                 ? $"No local feed. {provider.Coverage}"
                 : string.Join(Environment.NewLine, sessions.Select((reading, index) => FormatProviderReading(reading, now, index + 1)));
             return new ProviderRow(provider.Name, detail);
-        }).ToArray();
+        }).Concat(ConsumerProviders).ToArray();
 
     private static string FormatProviderReading(ProviderReading reading, DateTimeOffset now, int sessionNumber)
     {
@@ -127,5 +158,5 @@ public partial class MainWindow
 
     private static string Metric(long? value) => value?.ToString("N0", CultureInfo.CurrentCulture) ?? "—";
 
-    private sealed record ProviderRow(string Title, string Detail);
+    private sealed record ProviderRow(string Title, string Detail, Uri? Link = null);
 }
