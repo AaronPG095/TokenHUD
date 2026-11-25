@@ -1,7 +1,7 @@
 ---
 title: Plan - Feature: Cursor API and Consumer Coverage
 ticket: https://app.notion.com/p/TH-Plan-Feature-Cursor-API-and-Consumer-Coverage-4220b9c6786f81a996dae39ca98799ee
-status: in-progress
+status: shipped
 appetite: L
 impact: minor
 devTicketKey: TH:TH-Plan-Cursor-API-and-Consumer-Coverage-2026-11
@@ -14,6 +14,7 @@ reviewModel: gpt-6.2-sol
 reviewSession: /root/cursor_api_final_review
 baseBranch: main
 reviewFingerprint: 29c1fa70fce7bc5a52994e8e73b9d3982f3bb4eff97ca7f278c71ab166cd0930
+pr: https://github.com/AaronPG095/TokenHUD/pull/20
 ---
 # Cursor, API and Consumer Coverage
 
