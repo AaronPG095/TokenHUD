@@ -11,6 +11,16 @@ public partial class App : System.Windows.Application
     protected override void OnStartup(StartupEventArgs e)
     {
         base.OnStartup(e);
+        if (e.Args.Length == 2 && e.Args[0].Equals("--statusline", StringComparison.OrdinalIgnoreCase))
+        {
+            using var input = Console.OpenStandardInput();
+            var store = new ProviderTelemetryStore(new AppDataPaths().ProviderTelemetry);
+            var result = VendorStatusLine.ImportAsync(e.Args[1], input, store, DateTimeOffset.UtcNow).GetAwaiter().GetResult();
+            Console.Out.WriteLine(result.Text);
+            Shutdown(0);
+            return;
+        }
+
         if (e.Args.Length == 1 && e.Args[0].Equals("--ingest-provider", StringComparison.OrdinalIgnoreCase))
         {
             using var input = Console.OpenStandardInput();
