@@ -8,6 +8,12 @@ devTicketKey: TH:TH-Plan-Claude-and-Antigravity-Status-Lines-2026-11
 agent: Codex
 branch: codex/tokenhud-claude-antigravity
 worktree: TokenHUD
+reviewedBy: Codex
+reviewVerdict: pass
+reviewSession: /root/compact_qa_plan
+reviewModel: gpt-6.2-sol
+baseBranch: main
+reviewFingerprint: 32186a09bc83d0de8b482ac069e2e84623a4a721918135dd8db9ef81faf1948d
 ---
 # Claude and Antigravity Status Lines
 
@@ -30,7 +36,7 @@ None
 - [x] AC1: A Claude Code status-line sample updates a local reading with context, available usage and reported supported quota windows. Missing startup or compaction fields remain unavailable. verified: Documented synthetic payload verified exact input-only context, two quotas, and compaction with no fake occupied count.
 - [x] AC2: An Antigravity status-line sample updates a local Gemini reading. Reported context percentage and capacity remain distinct from request counters and unavailable exact occupied tokens. verified: Synthetic payload kept reported percentage and model capacity separate from request usage.
 - [x] AC3: Both feeds run through the local Windows executable without launching a second HUD or storing titles, paths, prompts, credentials or raw input. Existing user-configured status lines are kept unless the user deliberately configures the integration. verified: Native executable stdin/stdout smoke ran for both modes without opening the HUD. Store fixtures verified raw metadata exclusion.
-- [x] AC4: The Windows solution and fixtures pass. Document opt-in setup, foreground status-line output, provider limits and how to stop sending readings. verified: Clean solution build, 14 of 14 tests, and native status-line smoke and docs inspection.
+- [x] AC4: The Windows solution and fixtures pass. Document opt-in setup, foreground status-line output, provider limits and how to stop sending readings. verified: Clean solution build, 17 of 17 checks on the merged base, plus native smoke in Git Bash, Windows PowerShell and cmd.
 
 ## Steps
 
@@ -51,3 +57,4 @@ Cursor, API exporters, consumer chat live telemetry, provider credentials and mo
 On 2026-11-24 Aaron wrote “We want this to be implemented” and replied “Continue.” after the separate provider plan was proposed.
 
 ## Progress log
+- 2026-11-25 11:06 UTC, Codex (review: pass): Independent review verified corrected Windows shell commands, privacy projection and no-window startup. Combined build and all 17 checks passed. [reviewer: /root/compact_qa_plan] (model: gpt-6.2-sol)
