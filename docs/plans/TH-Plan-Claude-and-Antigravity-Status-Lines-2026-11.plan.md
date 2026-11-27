@@ -1,6 +1,6 @@
 ---
 title: Plan - Feature: Claude and Antigravity Status Lines
-ticket: https://app.notion.com/p/TH-Plan-Feature-Claude-and-Antigravity-Status-Lines-4220b9c6786f81249113e8ab66b07b35
+ticket: (redacted)
 status: shipped
 appetite: L
 impact: minor

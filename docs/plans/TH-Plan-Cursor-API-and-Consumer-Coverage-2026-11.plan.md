@@ -1,6 +1,6 @@
 ---
 title: Plan - Feature: Cursor API and Consumer Coverage
-ticket: https://app.notion.com/p/TH-Plan-Feature-Cursor-API-and-Consumer-Coverage-4220b9c6786f81a996dae39ca98799ee
+ticket: (redacted)
 status: shipped
 appetite: L
 impact: minor

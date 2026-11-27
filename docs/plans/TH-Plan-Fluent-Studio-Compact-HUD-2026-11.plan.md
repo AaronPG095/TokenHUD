@@ -1,6 +1,6 @@
 ---
 title: Plan - Feature: Fluent Studio Compact HUD
-ticket: https://app.notion.com/p/TH-Plan-Feature-Fluent-Studio-Compact-HUD-4220b9c6786f818f9ba7d97cccf354e3
+ticket: (redacted)
 status: shipped
 appetite: M
 impact: minor

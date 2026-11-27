@@ -18,7 +18,7 @@ import { fileURLToPath, pathToFileURL } from 'node:url';
 import { spawnSync, execFileSync } from 'node:child_process';
 
 const scripts = dirname(fileURLToPath(import.meta.url));
-const url = 'https://www.notion.so/40a0b9c6786f817fab0ff2059ad410e3';
+const url = '(redacted)';
 
 const defaultNotionConfig = {
   prefix: 'FO',
@@ -993,7 +993,7 @@ test('exec command runs shell commands across repositories', (t) => {
 test('pr command validates plan closeout and outputs PR body in dry-run mode', (t) => {
   const f = fixture(
     t,
-    'status: in-progress\nticket: https://www.notion.so/test\nbranch: feat/pr-test\nreviewedBy: Gemini\nreviewVerdict: pass\n',
+    'status: in-progress\nticket: (redacted) feat/pr-test\nreviewedBy: Gemini\nreviewVerdict: pass\n',
   );
   mkdirSync(join(f.root, '.github'));
   copyFileSync(
@@ -1136,7 +1136,7 @@ test('pr pins its verified base and head and retains the review when shipping a 
 test('ci-check requires a plan for workflow policy changes', (t) => {
   const f = fixture(
     t,
-    'status: in-progress\nticket: https://www.notion.so/test\n',
+    'status: in-progress\nticket: (redacted)',
   );
   f.git('init', '-b', 'main');
   f.git('add', '.');
@@ -1292,7 +1292,7 @@ test('ci-check validates committed plan identity, evidence, hygiene, and review 
 test('tick and defer commands update plan checkboxes without manual markdown edits', (t) => {
   const f = fixture(
     t,
-    'status: in-progress\nticket: https://www.notion.so/test\nbranch: feat/test\n',
+    'status: in-progress\nticket: (redacted) feat/test\n',
   );
 
   const planPath = f.plan;
@@ -1300,7 +1300,7 @@ test('tick and defer commands update plan checkboxes without manual markdown edi
     planPath,
     `---
 title: Plan - Feature: Tick Test
-ticket: https://www.notion.so/test
+ticket: (redacted)
 status: in-progress
 branch: feat/test
 ---
@@ -1343,14 +1343,14 @@ Testing tick and defer.
 test('prime command numbers open checkboxes sequentially', (t) => {
   const f = fixture(
     t,
-    'status: in-progress\nticket: https://www.notion.so/test\nbranch: feat/prime-test\n',
+    'status: in-progress\nticket: (redacted) feat/prime-test\n',
   );
   writeFileSync(
     f.plan,
     `---
 title: Plan - Process: Test
 status: in-progress
-ticket: https://www.notion.so/test
+ticket: (redacted)
 branch: feat/prime-test
 ---
 # Test
@@ -1409,7 +1409,7 @@ test('new command with --summary, --criteria, --steps, and --create scaffolds an
 test('recall command searches across ADRs and plans', (t) => {
   const f = fixture(
     t,
-    'status: in-progress\nticket: https://www.notion.so/test\n',
+    'status: in-progress\nticket: (redacted)',
   );
   f.run('adr', ['"Use SQLite for Cache"'], [], { omitPlan: true });
 
@@ -1422,7 +1422,7 @@ test('recall command searches across ADRs and plans', (t) => {
 test('archive command safely moves completed plans into archive folder', (t) => {
   const f = fixture(
     t,
-    'status: done\nticket: https://www.notion.so/test\ncompletedAt: 2026-11-01\n',
+    'status: done\nticket: (redacted) 2026-11-01\n',
   );
   const r = f.run('archive', [], [], { omitPlan: true });
   assert.equal(r.status, 0, r.stderr);
@@ -1441,7 +1441,7 @@ test('archive command safely moves completed plans into archive folder', (t) => 
 test('doctor command reports repository diagnostics', (t) => {
   const f = fixture(
     t,
-    'status: in-progress\nticket: https://www.notion.so/test\n',
+    'status: in-progress\nticket: (redacted)',
   );
   f.git('init', '-b', 'main');
   f.git('add', '.');
@@ -1464,7 +1464,7 @@ test('doctor command reports repository diagnostics', (t) => {
 test('wt command lists worktrees and supports prune in dry-run mode', (t) => {
   const f = fixture(
     t,
-    'status: in-progress\nticket: https://www.notion.so/test\n',
+    'status: in-progress\nticket: (redacted)',
   );
   f.git('init', '-b', 'main');
   f.git('add', '.');
@@ -1632,7 +1632,7 @@ test('verify command executes tiered commands and falls back to legacy verifyCom
 test('hygiene command detects unmerged conflicts, disallowed files, oversized files and integrates with check and pack', (t) => {
   const f = fixture(
     t,
-    'ticket: https://www.notion.so/40a0b9c6786f817fab0ff2059ad410e3\n',
+    'ticket: (redacted)',
     [],
     {
       hygiene: {
@@ -1847,7 +1847,7 @@ Initial scope.
 test('review enhancements: --prompt, dual-pass metadata, and verdict guardrails', (t) => {
   const f = fixture(
     t,
-    'ticket: https://www.notion.so/40a0b9c6786f817fab0ff2059ad410e3\n',
+    'ticket: (redacted)',
     [],
     { verifyCommand: 'npm test' },
   );
@@ -4188,7 +4188,7 @@ test('T3.5: verify --pre-push, prePushVerify hook/doctor, merge local Notion clo
     t,
     [
       'status: shipped',
-      `ticket: https://www.notion.so/${taskId}`,
+      `ticket: (redacted)`,
       'agent: Gemini',
       'reviewedBy: Gemini',
       'reviewVerdict: pass',
@@ -4663,7 +4663,7 @@ test('F1: cached git fixture, verify.fast, archive --merged [--fleet] [--dry-run
     [
       '---',
       'title: Plan - Feature: Shipped Closed',
-      'ticket: https://www.notion.so/40a0b9c6786f817fab0ff2059ad410e3',
+      'ticket: (redacted)',
       'status: shipped',
       'completedAt: 2026-11-15',
       '---',

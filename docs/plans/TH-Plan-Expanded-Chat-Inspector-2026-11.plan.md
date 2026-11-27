@@ -1,6 +1,6 @@
 ---
 title: Plan - Feature: Expanded Chat Inspector
-ticket: https://app.notion.com/p/TH-Plan-Feature-Expanded-Chat-Inspector-4220b9c6786f8147bfb4f48ac8290f48
+ticket: (redacted)
 status: shipped
 appetite: L
 impact: minor

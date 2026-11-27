@@ -1,6 +1,6 @@
 ---
 title: Plan - Chore: Sync VerifyExecEnv Fix
-ticket: https://app.notion.com/p/TH-Plan-Chore-Sync-VerifyExecEnv-Fix-41b0b9c6786f814dac15c37006f7cc7a
+ticket: (redacted)
 status: shipped
 priority: 
 state: 

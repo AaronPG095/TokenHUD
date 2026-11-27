@@ -1,6 +1,6 @@
 ---
 title: Plan - Feature: Provider Telemetry Foundation
-ticket: https://app.notion.com/p/TH-Plan-Feature-Provider-Telemetry-Foundation-4220b9c6786f8127b690f60dc5e596fa
+ticket: (redacted)
 status: shipped
 appetite: L
 impact: minor
