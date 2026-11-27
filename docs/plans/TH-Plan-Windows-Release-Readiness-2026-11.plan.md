@@ -1,6 +1,6 @@
 ---
 title: Plan - Feature: Windows Release Readiness
-ticket: https://app.notion.com/p/TH-Plan-Feature-Windows-Release-Readiness-4220b9c6786f817494cbfa733971e31b
+ticket: (redacted)
 status: shipped
 appetite: L
 impact: minor

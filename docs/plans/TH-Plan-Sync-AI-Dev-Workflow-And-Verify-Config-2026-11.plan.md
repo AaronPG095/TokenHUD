@@ -1,6 +1,6 @@
 ---
 title: Plan - Process: Sync AI Dev Workflow And Verify Config
-ticket: https://app.notion.com/p/TH-Plan-Process-Sync-AI-Dev-Workflow-And-Verify-Config-41a0b9c6786f81fd8f94e9c136d2dee1
+ticket: (redacted)
 status: shipped
 priority: 
 state: 

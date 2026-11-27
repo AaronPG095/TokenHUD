@@ -1,6 +1,6 @@
 ---
 title: Plan - Feature: Local Metrics History
-ticket: https://app.notion.com/p/TH-Plan-Feature-Local-Metrics-History-4220b9c6786f81229ea9c86bb5040ef4
+ticket: (redacted)
 status: shipped
 appetite: L
 impact: minor

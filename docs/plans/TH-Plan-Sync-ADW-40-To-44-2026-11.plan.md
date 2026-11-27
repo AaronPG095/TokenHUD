@@ -1,6 +1,6 @@
 ---
 title: Plan - Chore: Sync ADW 40 To 44
-ticket: https://app.notion.com/p/TH-Plan-Chore-Sync-ADW-40-To-44-41d0b9c6786f8159a2a7e00dc51d46d6
+ticket: (redacted)
 status: shipped
 priority: 
 state: 

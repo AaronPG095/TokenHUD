@@ -1,6 +1,6 @@
 ---
 title: Plan - Bug: Reliable Token HUD Readings
-ticket: https://app.notion.com/p/TH-Plan-Bug-Reliable-Token-HUD-Readings-4220b9c6786f816c921cce14bc620d61
+ticket: (redacted)
 status: shipped
 appetite: M
 impact: patch
